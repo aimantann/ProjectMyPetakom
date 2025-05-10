@@ -5,7 +5,7 @@
 
                 <!-- Main Section -->
                 <div class="sb-sidenav-menu-heading">Main</div>
-                <a class="nav-link" href="admin-dashboard.php">
+                <a class="nav-link" href="advisor-dashboard.php">
                     <div class="sb-nav-link-icon"></i></div>
                     Dashboard
                 </a>
@@ -21,7 +21,7 @@
                 <!-- Manage Membership Application -->
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseVehicle" aria-expanded="false" aria-controls="collapseVehicle">
                     <div class="sb-nav-link-icon"></i></div>
-                    Manage Membership Applications
+                    Manage Event Registration
                 </a>
 
             </div>
@@ -30,7 +30,7 @@
         <!-- Sidenav Footer -->
         <div class="sb-sidenav-footer">
             <div class="small">Logged in as:</div>
-            <p>Petakom Coordinator (Admin)</p>
+            <p>Event Advisor</p>
         </div>
     </nav>
 </div>

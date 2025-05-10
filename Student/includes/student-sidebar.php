@@ -5,7 +5,7 @@
 
                 <!-- Main Section -->
                 <div class="sb-sidenav-menu-heading">Main</div>
-                <a class="nav-link" href="admin-dashboard.php">
+                <a class="nav-link" href="../Student/student-dashboard.php">
                     <div class="sb-nav-link-icon"></i></div>
                     Dashboard
                 </a>
@@ -15,14 +15,18 @@
 
                 <!-- User -->
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseUser" aria-expanded="false" aria-controls="collapseUser">
-                    <div class="sb-nav-link-icon"></div>
-                    Manage Profile
-
-                <!-- Manage Membership Application -->
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseVehicle" aria-expanded="false" aria-controls="collapseVehicle">
                     <div class="sb-nav-link-icon"></i></div>
-                    Manage Membership Applications
+                    Manage Profile
+                    <div class="sb-sidenav-collapse-arrow"></i></div>
                 </a>
+
+                <!-- Membership -->
+                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseVehicle" aria-expanded="false" aria-controls="collapseVehicle">
+                    <div class="sb-nav-link-icon"></i></i></div>
+                    Manage Membership
+                    <div class="sb-sidenav-collapse-arrow"></i></div>
+                </a>
+
 
             </div>
         </div>
@@ -30,7 +34,7 @@
         <!-- Sidenav Footer -->
         <div class="sb-sidenav-footer">
             <div class="small">Logged in as:</div>
-            <p>Petakom Coordinator (Admin)</p>
+            <p>Student</p>
         </div>
     </nav>
 </div>
