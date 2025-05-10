@@ -1,1 +1,2 @@
 echo "abc"
+echo "BBB"
