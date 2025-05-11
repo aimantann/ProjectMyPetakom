@@ -41,7 +41,6 @@ session_start();
             margin-bottom: 20px;
             margin-top: 60px;
             margin-left: 175px;
-            
         }
         /* Set text alignment to left for labels */
         .login-container label {
@@ -71,6 +70,8 @@ if (isset($_POST['submit'])) {
     // Check if password matches confirm password
     if ($password != $confirm_password) {
         $error = "Passwords do not match.";
+    } elseif ($role == "") {
+        $error = "Please select a role.";
     } else {
         // Check if email already exists in the selected role
         if ($role == "event_advisor") {
@@ -102,8 +103,11 @@ if (isset($_POST['submit'])) {
             $stmt->bind_param('ss', $email, $password);
             $stmt->execute();
 
-            // Redirect to login page after successful registration
-            header("Location: login.php");
+            // Set session variable for success message
+            $_SESSION['success_message'] = "Account successfully created!";
+
+            // Redirect to user login page after successful registration
+            header("Location: user-login.php");
             exit();
         }
         $stmt->close();
@@ -122,14 +126,14 @@ if (isset($_POST['submit'])) {
                 echo "<div class='error-message'>$error</div>";
             }
             ?>
-            <form method="post" action="">
+            <form method="post" action="" id="registerForm">
                 <div class="form-group">
                     <label for="name">Full Name</label>
-                    <input type="name" class="form-control" id="name" name="name" required>
+                    <input type="text" class="form-control" id="name" name="name" required>
                 </div>
                 <div class="form-group">
                     <label for="phoneNum">Phone Number</label>
-                    <input type="phoneNum" class="form-control" id="phoneNum" name="phoneNum" required>
+                    <input type="text" class="form-control" id="phoneNum" name="phoneNum" required>
                 </div>
                 <div class="form-group">
                     <label for="email">Email</label>
@@ -146,6 +150,7 @@ if (isset($_POST['submit'])) {
                 <div class="form-group">
                     <label for="role">Select Role</label>
                     <select class="form-control" id="role" name="role" required>
+                        <option value="">---</option>
                         <option value="event_advisor">Event Advisor</option>
                         <option value="student">Student</option>
                     </select>

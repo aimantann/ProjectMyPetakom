@@ -1,5 +1,58 @@
 <?php
 session_start();
+include("includes/dbconnection.php");
+
+$error = "";
+
+if (isset($_POST['submit'])) {
+    $email = $_POST['email'];
+    $password = $_POST['password'];
+    $role = $_POST['role'];  // Capture role from the form
+
+    // Modify the query based on the role selected
+    if ($role == "event_advisor") {
+        // Event Advisor login logic
+        $query = "SELECT * FROM advisor WHERE advEmail=? AND advPassword=?";
+    } elseif ($role == "petakom_coordinator") {
+        // Petakom Coordinator (Admin) login logic
+        $query = "SELECT * FROM admin WHERE adminEmail=? AND adminPassword=?";
+    } elseif ($role == "student") {
+        // Student login logic
+        $query = "SELECT * FROM student WHERE stuEmail=? AND stuPassword=?";
+    } else {
+        $error = "Invalid role selected.";
+    }
+
+    // Execute the query if the role is valid
+    if ($role == "event_advisor" || $role == "petakom_coordinator" || $role == "student") {
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('ss', $email, $password);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+
+        if ($row) {
+            // Store user information and role in session
+            $_SESSION['email'] = $row['email'];  // Dynamically handle the correct field
+            $_SESSION['role'] = $role;  // Store role in session
+
+            // Redirect to the corresponding dashboard based on the role
+            if ($role == "event_advisor") {
+                header("Location: ../Event Advisor/advisor-dashboard.php");
+            } elseif ($role == "petakom_coordinator") {
+                header("Location: admin-dashboard.php");
+            } elseif ($role == "student") {
+                header("Location: ../Student/student-dashboard.php");
+            }
+            exit();
+        } else {
+            $error = "Incorrect Username or Password.";
+        }
+
+        $stmt->close();
+    }
+    $conn->close();
+}
 ?>
 
 <!DOCTYPE html>
@@ -54,62 +107,16 @@ session_start();
 <body class="bg-light">
 
 <?php
-include("includes/dbconnection.php");
-$error = "";
-
-if(isset($_POST['submit'])) {
-    $email = $_POST['email'];
-    $password = $_POST['password'];
-    $role = $_POST['role'];  // Capture role from the form
-
-    // Modify the query based on the role selected
-    if ($role == "event_advisor") {
-        // Event Advisor login logic (example)
-        $query = "SELECT * FROM advisor WHERE advEmail=? AND advPassword=?";
-    } elseif ($role == "petakom_coordinator") {
-        // Petakom Coordinator (Admin) login logic
-        $query = "SELECT * FROM admin WHERE adminEmail=? AND adminPassword=?";
-    } elseif ($role == "student") {
-        // Student login logic
-        $query = "SELECT * FROM student WHERE stuEmail=? AND stuPassword=?";
-    } else {
-        $error = "Invalid role selected.";
-    }
-
-    // Execute the query if the role is valid
-    if ($role == "event_advisor" || $role == "petakom_coordinator" || $role == "student") {
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param('ss', $email, $password);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $row = $result->fetch_assoc();
-
-        if ($row) {
-            // Store user information and role in session
-            $_SESSION['email'] = $row['email'];  // Dynamically handle the correct field
-            $_SESSION['role'] = $role;  // Store role in session
-
-            // Redirect to the corresponding dashboard based on the role
-            if ($role == "event_advisor") {
-                header("Location: ../Event Advisor/advisor-dashboard.php");
-            } elseif ($role == "petakom_coordinator") {
-                header("Location: admin-dashboard.php");
-            } elseif ($role == "student") {
-                header("Location: ../Student/student-dashboard.php");
-            }
-            exit();
-        } else {
-            $error = "Wrong Username or Password";
-        }
-
-        $stmt->close();
-    }
-    $conn->close();
+// Check if the session variable for success message is set and display it
+if (isset($_SESSION['success_message'])) {
+    echo "<script type='text/javascript'>alert('" . $_SESSION['success_message'] . "');</script>";
+    // Unset the session variable after displaying the message
+    unset($_SESSION['success_message']);
 }
 ?>
 
 <div class="center-container">
-    <img src="images/MyPetakom Logo.png" alt="PETAKOM Logo" class="logo"> <!-- Logo path here -->
+    <img src="images/MyPetakom Logo.png" alt="PETAKOM Logo" class="logo">
     <div>
         <div class="login-container">
             <h1 class="login-title">LOGIN</h1>
@@ -118,10 +125,10 @@ if(isset($_POST['submit'])) {
                 echo "<div class='error-message'>$error</div>";
             }
             ?>
-            <form method="post" action="">
+            <form method="post" action="user-login.php">
                 <div class="form-group">
                     <label for="email">Email</label>
-                    <input type="text" class="form-control" id="email" name="email" required>
+                    <input type="email" class="form-control" id="email" name="email" required>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
@@ -140,7 +147,7 @@ if(isset($_POST['submit'])) {
                     <button type="submit" name="submit" class="btn btn-primary btn-block">Login</button>
                 </div>
                 <div class="form-group text-center">
-                    <a href="../Student/user-register.php">Register New Account</a> | <a href="../staff/staff-login.php">Forgot Password?</a>
+                    <a href="../Admin/user-register.php">Register New Account</a> | <a href="../staff/staff-login.php">Forgot Password?</a>
                 </div>
             </form>
         </div>
