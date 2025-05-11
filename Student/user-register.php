@@ -160,7 +160,7 @@ if (isset($_POST['submit'])) {
                     <button type="submit" name="submit" class="btn btn-primary btn-block">Register</button>
                 </div>
                 <div class="form-group text-center">
-                    <a href="../student/student-login.php">Already have an account? Login</a>
+                    <a href="../Student/user-login.php">Already have an account? Login</a>
                 </div>
             </form>
         </div>

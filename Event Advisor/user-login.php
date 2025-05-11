@@ -147,7 +147,7 @@ if (isset($_SESSION['success_message'])) {
                     <button type="submit" name="submit" class="btn btn-primary btn-block">Login</button>
                 </div>
                 <div class="form-group text-center">
-                    <a href="../Admin/user-register.php">Register New Account</a> | <a href="../staff/staff-login.php">Forgot Password?</a>
+                    <a href="../Event Advisor/user-register.php">Register New Account</a> | <a href="../Event Advisor/user-forgot.php">Forgot Password?</a>
                 </div>
             </form>
         </div>

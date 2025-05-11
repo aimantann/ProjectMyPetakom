@@ -137,8 +137,8 @@ if (isset($_SESSION['success_message'])) {
                 <div class="form-group">
                     <label for="role">Role</label>
                     <select class="form-control" id="role" name="role" required>
-                        <option value="event_advisor">Event Advisor</option>
                         <option value="student">Student</option>
+                        <option value="event_advisor">Event Advisor</option>
                         <option value="petakom_coordinator">Petakom Coordinator (Admin)</option>
                     </select>
                 </div>
@@ -147,7 +147,7 @@ if (isset($_SESSION['success_message'])) {
                     <button type="submit" name="submit" class="btn btn-primary btn-block">Login</button>
                 </div>
                 <div class="form-group text-center">
-                    <a href="../Admin/user-register.php">Register New Account</a> | <a href="../staff/staff-login.php">Forgot Password?</a>
+                    <a href="../Student/user-register.php">Register New Account</a> | <a href="../Student/user-forgot.php">Forgot Password?</a>
                 </div>
             </form>
         </div>
