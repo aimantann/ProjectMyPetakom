@@ -20,8 +20,8 @@
                     <div class="sb-sidenav-collapse-arrow"></i></div>
                 </a>
 
-                <!-- Membership -->
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseVehicle" aria-expanded="false" aria-controls="collapseVehicle">
+                <!-- Manage Membership -->
+                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseManageMembership" aria-expanded="false" aria-controls="collapseManageMembership">
                     <div class="sb-nav-link-icon"></i></i></div>
                     Manage Membership
                     <div class="sb-sidenav-collapse-arrow"></i></div>

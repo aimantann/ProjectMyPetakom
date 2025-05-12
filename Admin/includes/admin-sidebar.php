@@ -19,7 +19,7 @@
                     Manage Profile
 
                 <!-- Manage Membership Application -->
-                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseVehicle" aria-expanded="false" aria-controls="collapseVehicle">
+                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseMembership" aria-expanded="false" aria-controls="collapseMembership">
                     <div class="sb-nav-link-icon"></i></div>
                     Manage Membership Applications
                 </a>
