@@ -4,7 +4,6 @@ session_start();
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <title>Register</title>
@@ -42,7 +41,6 @@ session_start();
             margin-top: 60px;
             margin-left: 175px;
         }
-        /* Set text alignment to left for labels */
         .login-container label {
             text-align: left;
             display: block;
@@ -65,15 +63,14 @@ if (isset($_POST['submit'])) {
     $email = $_POST['email'];
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
-    $role = $_POST['role'];  // Capture role from the form
+    $role = $_POST['role'];
 
-    // Check if password matches confirm password
     if ($password != $confirm_password) {
         $error = "Passwords do not match.";
     } elseif ($role == "") {
         $error = "Please select a role.";
     } else {
-        // Check if email already exists in the selected role
+        // Check for existing email
         if ($role == "event_advisor") {
             $query = "SELECT * FROM advisor WHERE advEmail=?";
         } elseif ($role == "petakom_coordinator") {
@@ -86,11 +83,13 @@ if (isset($_POST['submit'])) {
         $stmt->bind_param('s', $email);
         $stmt->execute();
         $result = $stmt->get_result();
-        
+
         if ($result->num_rows > 0) {
             $error = "Email is already registered.";
         } else {
-            // Insert new user into the appropriate table
+            // Insert user
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
             if ($role == "event_advisor") {
                 $insert_query = "INSERT INTO advisor (advEmail, advPassword) VALUES (?, ?)";
             } elseif ($role == "petakom_coordinator") {
@@ -100,13 +99,10 @@ if (isset($_POST['submit'])) {
             }
 
             $stmt = $conn->prepare($insert_query);
-            $stmt->bind_param('ss', $email, $password);
+            $stmt->bind_param('ss', $email, $hashedPassword);
             $stmt->execute();
 
-            // Set session variable for success message
             $_SESSION['success_message'] = "Account successfully created!";
-
-            // Redirect to user login page after successful registration
             header("Location: user-login.php");
             exit();
         }
@@ -117,7 +113,7 @@ if (isset($_POST['submit'])) {
 ?>
 
 <div class="center-container">
-    <img src="images/MyPetakom Logo.png" alt="PETAKOM Logo" class="logo"> <!-- Logo path here -->
+    <img src="images/MyPetakom Logo.png" alt="PETAKOM Logo" class="logo">
     <div>
         <div class="login-container">
             <h1 class="login-title">CREATE ACCOUNT</h1>
@@ -166,10 +162,6 @@ if (isset($_POST['submit'])) {
         </div>
     </div>
 </div>
-
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
 </body>
 </html>
