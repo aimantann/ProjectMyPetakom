@@ -6,7 +6,7 @@
                 <!-- Main Section -->
                 <div class="sb-sidenav-menu-heading">Main</div>
                 <a class="nav-link" href="../Student/student-dashboard.php">
-                    <div class="sb-nav-link-icon"></i></div>
+                    <div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>
                     Dashboard
                 </a>
                 
@@ -15,18 +15,17 @@
 
                 <!-- User -->
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseUser" aria-expanded="false" aria-controls="collapseUser">
-                    <div class="sb-nav-link-icon"></i></div>
+                    <div class="sb-nav-link-icon"><i class="fas fa-user"></i></div>
                     Manage Profile
-                    <div class="sb-sidenav-collapse-arrow"></i></div>
+                    <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
                 </a>
 
                 <!-- Manage Membership -->
                 <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseManageMembership" aria-expanded="false" aria-controls="collapseManageMembership">
-                    <div class="sb-nav-link-icon"></i></i></div>
+                    <div class="sb-nav-link-icon"><i class="fas fa-users"></i></div>
                     Manage Membership
-                    <div class="sb-sidenav-collapse-arrow"></i></div>
+                    <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
                 </a>
-
 
             </div>
         </div>
@@ -38,4 +37,3 @@
         </div>
     </nav>
 </div>
-

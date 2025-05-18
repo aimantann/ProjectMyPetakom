@@ -3,36 +3,38 @@
         <div class="sb-sidenav-menu">
             <div class="nav">
 
-                    <!-- Main Section -->
-                    <div class="sb-sidenav-menu-heading">Main</div>
-                    <a class="nav-link" href="admin-dashboard.php">
-                        <div class="sb-nav-link-icon"><i class="fa-solid fa-table-columns"></i></div>
-                        Dashboard
-                    </a>
-                    
-                    <!-- Features Section -->
-                    <div class="sb-sidenav-menu-heading">Features</div>
+                <!-- Main Section -->
+                <div class="sb-sidenav-menu-heading">Main</div>
+                <a class="nav-link" href="../Student/student-dashboard.php">
+                    <div class="sb-nav-link-icon"></i></div>
+                    Dashboard
+                </a>
+                
+                <!-- Features Section -->
+                <div class="sb-sidenav-menu-heading">Features</div>
 
-                    <!-- User -->
-                    <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseUser" aria-expanded="false" aria-controls="collapseUser">
-                        <div class="sb-nav-link-icon"><i class="fas fa-user"></i></div>
-                        Manage Profile
-                    </a>
+                <!-- User -->
+                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseUser" aria-expanded="false" aria-controls="collapseUser">
+                    <div class="sb-nav-link-icon"></i></div>
+                    Manage Profile
+                    <div class="sb-sidenav-collapse-arrow"></i></div>
+                </a>
 
-                    <!-- Manage Membership Application -->
-                    <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseMembership" aria-expanded="false" aria-controls="collapseMembership">
-                        <div class="sb-nav-link-icon"><i class="fas fa-users"></i></div>
-                        Manage Membership Applications
-                    </a>
+                <!-- Manage Membership -->
+                <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseManageMembership" aria-expanded="false" aria-controls="collapseManageMembership">
+                    <div class="sb-nav-link-icon"></i></i></div>
+                    Manage Membership
+                    <div class="sb-sidenav-collapse-arrow"></i></div>
+                </a>
 
-                </div>
+
+            </div>
         </div>
         
         <!-- Sidenav Footer -->
         <div class="sb-sidenav-footer">
             <div class="small">Logged in as:</div>
-            <p>Admin</p>
+            <p>Student</p>
         </div>
     </nav>
 </div>
-
