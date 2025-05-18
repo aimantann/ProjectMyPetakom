@@ -17,7 +17,7 @@ if (isset($_COOKIE[session_name()])) {
 
 session_destroy();
 
-// Redirect to the login page with proper path
-header("Location: ../user-login.php");  // Changed this line
+header("Location: user-login.php");
+
 exit();
 ?>

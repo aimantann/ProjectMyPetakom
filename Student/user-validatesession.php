@@ -9,7 +9,8 @@ header("Expires: Fri, 01 Jan 1990 00:00:00 GMT");
 
 // Check if the user is logged in and has a valid session token
 if (!isset($_SESSION['user_logged_in']) || $_SESSION['user_logged_in'] !== true || 
-    !isset($_SESSION['session_token']) || empty($_SESSION['session_token'])) {
+    !isset($_SESSION['session_token']) || empty($_SESSION['session_token']) ||
+    !isset($_SESSION['role']) || $_SESSION['role'] !== 'student') {
     
     // User's session is invalid or expired
     // Clear any remaining session data
@@ -25,12 +26,12 @@ if (!isset($_SESSION['user_logged_in']) || $_SESSION['user_logged_in'] !== true 
     session_start();
     $_SESSION['login_required'] = "Your session has expired. Please login again to view the dashboard.";
     
-    // Since user-login.php is in the same directory, use the direct filename
-    header("Location: user-login.php");
+    // Redirect to login page with correct path
+    header("Location: ../Student/user-login.php");
     exit;
 } else {
     // User has a valid session, redirect them back to the dashboard
-    header("Location: advisor-dashboard.php");
+    header("Location: student-dashboard.php");
     exit;
 }
 ?>

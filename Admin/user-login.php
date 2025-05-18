@@ -1,54 +1,84 @@
 <?php
-session_start();
+session_start();  // Start the session to handle session variables
 include("includes/dbconnection.php");
 
 $error = "";
 
+// Prevent caching of the page to prevent the back button showing the dashboard after logout
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0"); 
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+header("Expires: Fri, 01 Jan 1990 00:00:00 GMT");
+
+
+// Store messages to display after page is rendered
+$messages = array();
+
+
+// Check if login required message exists and capture it
+if (isset($_SESSION['login_required'])) {
+    $messages[] = $_SESSION['login_required'];
+    // Unset the session variable after capturing the message
+    unset($_SESSION['login_required']);
+}
+
 if (isset($_POST['submit'])) {
     $email = $_POST['email'];
     $password = $_POST['password'];
-    $role = $_POST['role'];
+    $role = $_POST['role'];  // Capture role from the form
 
-    if ($role == "event_advisor") {
-        $query = "SELECT * FROM advisor WHERE advEmail=?";
-        $email_field = 'advEmail';
-        $password_field = 'advPassword';
-    } elseif ($role == "petakom_coordinator") {
-        $query = "SELECT * FROM admin WHERE adminEmail=?";
-        $email_field = 'adminEmail';
-        $password_field = 'adminPassword';
-    } elseif ($role == "student") {
-        $query = "SELECT * FROM student WHERE stuEmail=?";
-        $email_field = 'stuEmail';
-        $password_field = 'stuPassword';
+    // Check if inputs are not empty
+    if (empty($email) || empty($password) || empty($role)) {
+        $error = "All fields are required.";
     } else {
-        $error = "Invalid role selected.";
-    }
-
-    if (isset($query)) {
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param('s', $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $row = $result->fetch_assoc();
-
-        if ($row && password_verify($password, $row[$password_field])) {
-            $_SESSION['email'] = $row[$email_field];
-            $_SESSION['role'] = $role;
-
-            if ($role == "event_advisor") {
-                header("Location: ../Event Advisor/advisor-dashboard.php");
-            } elseif ($role == "petakom_coordinator") {
-                header("Location: admin-dashboard.php");
-            } elseif ($role == "student") {
-                header("Location: ../Student/student-dashboard.php");
-            }
-            exit();
+        // Modify the query based on the role selected
+        if ($role == "event_advisor") {
+            $query = "SELECT * FROM advisor WHERE advEmail=? AND advPassword=?";
+        } elseif ($role == "petakom_coordinator") {
+            $query = "SELECT * FROM admin WHERE adminEmail=? AND adminPassword=?";
+        } elseif ($role == "student") {
+            $query = "SELECT * FROM student WHERE stuEmail=? AND stuPassword=?";
         } else {
-            $error = "Incorrect email or password.";
+            $error = "Invalid role selected.";
         }
 
-        $stmt->close();
+        // Execute the query if the role is valid
+        if ($role == "event_advisor" || $role == "petakom_coordinator" || $role == "student") {
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param('ss', $email, $password);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result->fetch_assoc();
+
+            if ($row) {
+                // Generate a new session ID to prevent session fixation attacks
+                session_regenerate_id(true);
+                
+                $_SESSION['user_logged_in'] = true; // Mark the user as logged in
+                $_SESSION['email'] = $email; 
+                $_SESSION['role'] = $role;
+                
+                // Create a session token for added security
+                $_SESSION['session_token'] = bin2hex(random_bytes(32));
+                
+                // Set the last activity time for session timeout handling
+                $_SESSION['last_activity'] = time();
+
+                // Redirect to the corresponding dashboard based on the role
+                if ($role == "event_advisor") {
+                    header("Location: ../Event Advisor/advisor-dashboard.php");
+                } elseif ($role == "petakom_coordinator") {
+                    header("Location: admin-dashboard.php");
+                } elseif ($role == "student") {
+                    header("Location: ../Student/student-dashboard.php");
+                }
+                exit();
+            } else {
+                $error = "Incorrect Username or Password.";
+            }
+
+            $stmt->close();
+        }
     }
     $conn->close();
 }
@@ -56,9 +86,14 @@ if (isset($_POST['submit'])) {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Login</title>
+    <!-- Add meta tags to prevent caching -->
+    <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="pragma" content="no-cache">
+    <meta http-equiv="expires" content="0">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         .center-container {
@@ -67,7 +102,7 @@ if (isset($_POST['submit'])) {
             justify-content: center;
             align-items: center;
             flex-direction: column;
-            margin-top: -50px;
+            margin-top: -50px; /* Adjust as needed */
         }
         .login-container {
             background: #ffffff;
@@ -79,9 +114,9 @@ if (isset($_POST['submit'])) {
             text-align: center;
         }
         .login-title {
-            font-family: 'Arial', sans-serif;
-            font-size: 30px;
-            font-weight: bold;
+            font-family: 'Arial', sans-serif; 
+            font-size: 30px; 
+            font-weight: bold; 
             color: #333;
             margin-bottom: 20px;
         }
@@ -89,6 +124,7 @@ if (isset($_POST['submit'])) {
             max-width: 200px;
             margin-bottom: 20px;
         }
+        /* Set text alignment to left for labels */
         .login-container label {
             text-align: left;
             display: block;
@@ -98,26 +134,41 @@ if (isset($_POST['submit'])) {
             color: red;
             margin-bottom: 15px;
         }
+        .info-message {
+            color: #0056b3;
+            background-color: #e6f0ff;
+            border: 1px solid #b3d7ff;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
     </style>
 </head>
 
 <body class="bg-light">
-
-<?php
-if (isset($_SESSION['success_message'])) {
-    echo "<script type='text/javascript'>alert('" . $_SESSION['success_message'] . "');</script>";
-    unset($_SESSION['success_message']);
-}
-?>
 
 <div class="center-container">
     <img src="images/MyPetakom Logo.png" alt="PETAKOM Logo" class="logo">
     <div>
         <div class="login-container">
             <h1 class="login-title">LOGIN</h1>
+            
             <?php
+            // Display any captured messages
+            if (!empty($messages)) {
+                foreach ($messages as $message) {
+                    echo "<div class='info-message'>" . htmlspecialchars($message) . "</div>";
+                }
+                
+                // Also show as an alert for better visibility
+                echo "<script type='text/javascript'>";
+                echo "alert('" . addslashes(implode("\\n", $messages)) . "');";
+                echo "</script>";
+            }
+            
             if ($error != "") {
-                echo "<div class='error-message'>$error</div>";
+                echo "<div class='error-message'>" . htmlspecialchars($error) . "</div>";
             }
             ?>
             <form method="post" action="user-login.php">
@@ -142,13 +193,53 @@ if (isset($_SESSION['success_message'])) {
                     <button type="submit" name="submit" class="btn btn-primary btn-block">Login</button>
                 </div>
                 <div class="form-group text-center">
-                    <a href="../Admin/user-register.php">Register New Account</a> |
-                    <a href="../Admin/user-forgot.php">Forgot Password?</a>
+                    <a href="../Admin/user-register.php">Register New Account</a> | <a href="../Admin/user-forgot.php">Forgot Password?</a>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<!-- Add JavaScript to handle page reloads and back button -->
+<script type="text/javascript">
+    // When page loads
+    window.onload = function() {
+        // When navigating to this page
+        window.addEventListener('pageshow', function(event) {
+            // If navigated via browser cache/history (like back button)
+            if (event.persisted || performance.navigation.type === 2) {
+                // Force a page refresh to ensure newest state
+                window.location.reload();
+            }
+        });
+        
+        // Clear browser form autofill
+        document.getElementById('email').value = '';
+        document.getElementById('password').value = '';
+        
+        // Set focus to the email field
+        document.getElementById('email').focus();
+    };
+    
+    // History manipulation for better back button handling
+    if (window.history && window.history.pushState) {
+        // When user navigates to this page
+        window.history.pushState('login', null, '');
+        
+        // When user presses back button
+        window.addEventListener('popstate', function() {
+            // Push another state to prevent going back to protected pages
+            window.history.pushState('login', null, '');
+            
+            // Show login prompt
+            alert("Please log in to continue.");
+        });
+    }
+</script>
 
 </body>
 </html>

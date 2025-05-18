@@ -34,7 +34,7 @@
         <!-- Sidenav Footer -->
         <div class="sb-sidenav-footer">
             <div class="small">Logged in as:</div>
-            <p>Student</p>
+            <p>Admin</p>
         </div>
     </nav>
 </div>
