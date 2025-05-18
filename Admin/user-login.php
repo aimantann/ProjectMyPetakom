@@ -51,6 +51,7 @@ if (isset($_POST['submit'])) {
             $row = $result->fetch_assoc();
 
             if ($row) {
+                
                 // Generate a new session ID to prevent session fixation attacks
                 session_regenerate_id(true);
                 
