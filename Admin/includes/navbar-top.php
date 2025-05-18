@@ -1,23 +1,58 @@
-<nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
-    <!-- Navbar Brand -->
-    <a class="navbar-brand ps-3" href="index.php">
-        <img src="images/MyPetakom Dashboard Logo.png" alt="Logo" style="height: 100px;">
-    </a>
-    <!-- Sidebar Toggle -->
-    <button class="btn btn-link btn-sm order-1 order-lg-0 me-4 me-lg-0" id="sidebarToggle" href="#!"><i class="fas fa-bars"></i></button>
-    <!-- Navbar Search -->
-    <form class="d-none d-md-inline-block form-inline ms-auto me-0 me-md-3 my-2 my-md-0">
-    </form>
-    <!-- Navbar -->
-    <ul class="navbar-nav ms-auto ms-md-0 me-3 me-lg-4">
-        <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-user fa-fw"></i></a>
-            <!-- Dropdown Menu -->
-            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                <li><a class="dropdown-item" href="admin-view-profile.php">User Profile</a></li>
-                <li><hr class="dropdown-divider" /></li>
-                <li><a class="dropdown-item" href="user-logout.php">Logout</a></li>
-            </ul>
-        </li>
-    </ul>
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <div class="container-fluid">
+        <!-- Sidebar Toggle Button -->
+        <button type="button" id="sidebarToggle" class="btn btn-light border rounded-circle">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <!-- Page Title -->
+        <span class="navbar-brand mb-0 h1 ms-3">Admin Dashboard</span>
+        
+        <!-- Navbar Right Side -->
+        <div class="ms-auto d-flex align-items-center">
+            <!-- Search Box -->
+            <!-- <form class="d-none d-md-flex me-4" role="search">
+                <div class="input-group">
+                    <input class="form-control border-end-0" type="search" placeholder="Search..." aria-label="Search">
+                    <button class="btn btn-outline-secondary border-start-0" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </form> -->
+            
+            <!-- Notifications
+            <div class="dropdown me-3">
+                <a class="nav-link position-relative" href="#" id="notificationsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-bell fa-lg"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        56
+                        <span class="visually-hidden">unread notifications</span>
+                    </span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="notificationsDropdown">
+                    <li><h6 class="dropdown-header">Notifications</h6></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#">New membership request</a></li>
+                    <li><a class="dropdown-item" href="#">Activity approval needed</a></li>
+                    <li><a class="dropdown-item" href="#">System update available</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-center" href="#">View all notifications</a></li>
+                </ul>
+            </div> -->
+            
+            <!-- User Profile -->
+            <div class="dropdown">
+                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <!-- <img src="images/avatar-placeholder.jpg" class="rounded-circle me-2" width="32" height="32" alt="User"> -->
+                    <span class="d-none d-sm-inline">Admin</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item" href="admin-view-profile.php"><i class="fas fa-user me-2"></i> Profile</a></li>
+                    <li><a class="dropdown-item" href="admin-settings.php"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="user-logout.php"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
 </nav>

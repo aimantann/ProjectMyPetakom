@@ -1,0 +1,215 @@
+/* Main Layout */
+.wrapper {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+    align-items: stretch;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    width: 280px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 999;
+    background: #212529;
+    color: #fff;
+    transition: all 0.3s;
+    box-shadow: 3px 0 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Content Area */
+.content {
+    width: calc(100% - 280px);
+    margin-left: 280px;
+    min-height: 100vh;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+    background-color: #f8f9fa;
+}
+
+/* When sidebar is collapsed */
+.wrapper.sidebar-collapsed .sidebar {
+    width: 80px;
+    text-align: center;
+}
+
+.wrapper.sidebar-collapsed .content {
+    width: calc(100% - 80px);
+    margin-left: 80px;
+}
+
+/* Hide text when sidebar is collapsed */
+.wrapper.sidebar-collapsed .sidebar .sidebar-header h3,
+.wrapper.sidebar-collapsed .sidebar .user-info,
+.wrapper.sidebar-collapsed .sidebar-link span,
+.wrapper.sidebar-collapsed .sidebar-footer,
+.wrapper.sidebar-collapsed .sidebar-heading,
+.wrapper.sidebar-collapsed .fa-chevron-down {
+    display: none;
+}
+
+/* Sidebar Header */
+.sidebar-header {
+    padding: 20px;
+    background: #1a1f24;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sidebar-header .logo img {
+    max-height: 40px;
+}
+
+.sidebar-header h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+/* User Profile Section */
+.user-profile {
+    padding: 15px;
+}
+
+.user-avatar img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.user-role {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.8rem;
+}
+
+/* Sidebar Menu */
+.sidebar-menu {
+    padding: 0 15px;
+    margin-bottom: 0;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.sidebar-item {
+    margin-bottom: 5px;
+}
+
+.sidebar-link {
+    padding: 10px 15px;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    font-size: 1rem;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s;
+}
+
+.sidebar-link:hover, 
+.sidebar-link:focus {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-item.active .sidebar-link {
+    background: #0d6efd;
+    color: #fff;
+}
+
+/* Dropdown Menu */
+.submenu {
+    padding-left: 35px;
+    margin-top: 5px;
+}
+
+.submenu a {
+    padding: 8px 15px;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    font-size: 0.9rem;
+    border-radius: 5px;
+    display: block;
+    transition: all 0.3s;
+}
+
+.submenu a:hover, 
+.submenu a:focus {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Section Dividers */
+.sidebar-divider {
+    margin: 20px 0 10px;
+    position: relative;
+}
+
+.sidebar-heading {
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.4);
+    padding: 0 15px;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+    padding: 15px;
+    background: #1a1f24;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    text-align: center;
+}
+
+/* Navbar Styles */
+.navbar {
+    padding: 12px 20px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 991.98px) {
+    .sidebar {
+        margin-left: -280px;
+    }
+    
+    .content {
+        width: 100%;
+        margin-left: 0;
+    }
+    
+    .wrapper.sidebar-collapsed .sidebar {
+        margin-left: 0;
+        width: 280px;
+    }
+    
+    .wrapper.sidebar-collapsed .content {
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    .wrapper.sidebar-collapsed .sidebar .sidebar-header h3,
+    .wrapper.sidebar-collapsed .sidebar .user-info,
+    .wrapper.sidebar-collapsed .sidebar-link span,
+    .wrapper.sidebar-collapsed .sidebar-footer,
+    .wrapper.sidebar-collapsed .sidebar-heading,
+    .wrapper.sidebar-collapsed .fa-chevron-down {
+        display: block;
+    }
+}
+
+/* Main Content Area */
+main {
+    flex: 1;
+    padding: 20px 0;
+}
+
+/* Add placeholder image for sidebar if you don't have avatar-placeholder.jpg */
+/* You should add an avatar-placeholder.jpg file to your images directory */

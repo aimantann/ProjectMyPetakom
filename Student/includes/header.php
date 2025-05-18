@@ -6,30 +6,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta name="description" content="" />
     <meta name="author" content="" />
-    <title>Admin Dashboard</title>
+    <title>Student Dashboard</title>
 
-    <!-- External Stylesheets -->
+    <!-- Bootstrap 5.3 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="css/styles.css" rel="stylesheet" />
-
-    <!-- Font Awesome Library -->
+    
+    <!-- Font Awesome Icons -->
     <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+    
+    <!-- Custom Sidebar CSS -->
+    <link href="css/sidebar.css" rel="stylesheet" />
 </head>
-<body class="sb-nav-fixed">
-    <?php
-    // Include top navigation bar
-    include('includes/navbar-top.php');
-    ?>
-    <div id="layoutSidenav">
+<body>
+    <div class="wrapper">
         <?php
         // Include sidebar
         include('includes/student-sidebar.php');
         ?>
-        <div id="layoutSidenav_content">
-            <main>
-                <!--  main content goes here -->
-            </main>
-        </div>
-    </div>
+        
+        <div class="content">
+            <?php
+            // Include top navigation bar
+            include('includes/navbar-top.php');
+            ?>
+            
+            <main class="container-fluid px-4 py-3">
+                <!-- Main content goes here -->
+                
+                
+                <!-- Add your page content here -->
+                
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Sidebar Toggle Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sidebar toggle function
+            const toggleSidebar = document.querySelector('#sidebarToggle');
+            if (toggleSidebar) {
+                toggleSidebar.addEventListener('click', function() {
+                    document.querySelector('.wrapper').classList.toggle('sidebar-collapsed');
+                });
+            }
+            
+            // Initialize Bootstrap tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
 </body>
 </html>
