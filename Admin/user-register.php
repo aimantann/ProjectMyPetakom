@@ -5,7 +5,52 @@ session_start();
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Head content remains the same -->
+    <meta charset="UTF-8">
+    <title>Register</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .center-container {
+            height: 100vh;
+            display: grid;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            margin-top: -50px;
+        }
+        .login-container {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 150%;
+            text-align: center;
+            margin-right: 170px;
+            margin-left: 100px;
+        }
+        .login-title {
+            font-family: 'Arial', sans-serif; 
+            font-size: 30px; 
+            font-weight: bold; 
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .logo {
+            max-width: 250px;
+            margin-bottom: 20px;
+            margin-top: 60px;
+            margin-left: 175px;
+        }
+        .login-container label {
+            text-align: left;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .error-message {
+            color: red;
+            margin-bottom: 15px;
+        }
+    </style>
 </head>
 
 <body class="bg-light">
