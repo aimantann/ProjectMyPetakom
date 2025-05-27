@@ -101,6 +101,42 @@
             </ul>
         </li>
 
+        <!-- Event Management -->
+        <li class="sidebar-item">
+            <a href="#eventSubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed">
+                <i class="fas fa-calendar-alt me-2"></i>
+                <span>Manage Event</span>
+                <i class="fas fa-chevron-down ms-auto"></i>
+            </a>
+            <ul class="collapse list-unstyled submenu" id="eventSubmenu">
+                <li>
+                    <a href="Module2/EventList.php">
+                        <i class="fas fa-list-alt me-2"></i> List Event
+                    </a>
+                </li>
+                <li>
+                    <a href="Module2/EventRegistrationForm.php">
+                        <i class="fas fa-plus-circle me-2"></i> Register Event
+                    </a>
+                </li>
+                <li>
+                    <a href="admin-add-activity.php">
+                        <i class="fas fa-plus-circle me-2"></i> Committee Event
+                    </a>
+                </li>
+                <li>
+                    <a href="admin-add-activity.php">
+                        <i class="fas fa-plus-circle me-2"></i> Merit Event
+                    </a>
+                </li>
+                <li>
+                    <a href="admin-add-activity.php">
+                        <i class="fas fa-list-alt me-2"></i> QRCode Event
+                    </a>
+                </li>
+            </ul>
+        </li>
+
         <!-- Divider -->
         <li class="sidebar-divider">
             <span class="sidebar-heading">Settings</span>
