@@ -22,7 +22,7 @@
     <ul class="list-unstyled sidebar-menu">
         <!-- Dashboard -->
         <li class="sidebar-item active">
-            <a href="admin-dashboard.php" class="sidebar-link">
+            <a href="student-dashboard.php" class="sidebar-link">
                 <i class="fas fa-tachometer-alt me-2"></i>
                 <span>Dashboard</span>
             </a>
@@ -42,12 +42,12 @@
             </a>
             <ul class="collapse list-unstyled submenu" id="profileSubmenu">
                 <li>
-                    <a href="admin-view-profile.php">
+                    <a href="student-viewprofile.php">
                         <i class="fas fa-id-card me-2"></i> View Profile
                     </a>
                 </li>
                 <li>
-                    <a href="admin-edit-profile.php">
+                    <a href="student-editprofile.php">
                         <i class="fas fa-user-edit me-2"></i> Edit Profile
                     </a>
                 </li>

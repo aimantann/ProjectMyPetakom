@@ -60,6 +60,8 @@ include("includes/dbconnection.php");
 $error = "";
 
 if (isset($_POST['submit'])) {
+    $name = $_POST['name'];
+    $phoneNum = $_POST['phoneNum'];
     $email = $_POST['email'];
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
@@ -91,19 +93,19 @@ if (isset($_POST['submit'])) {
             
             // Insert new user into the appropriate table
             if ($role == "event_advisor") {
-                $insert_query = "INSERT INTO advisor (advEmail, advPassword) VALUES (?, ?)";
+                $insert_query = "INSERT INTO advisor (advName, advPhoneNum, advEmail, advPassword) VALUES (?, ?, ?, ?)";
+                $stmt = $conn->prepare($insert_query);
+                $stmt->bind_param('ssss', $name, $phoneNum, $email, $hashedPassword);
             } elseif ($role == "petakom_coordinator" || $role == "admin") {
                 $insert_query = "INSERT INTO admin (adminEmail, adminPassword) VALUES (?, ?)";
+                $stmt = $conn->prepare($insert_query);
+                $stmt->bind_param('ss', $email, $hashedPassword);
             } elseif ($role == "student") {
-                $insert_query = "INSERT INTO student (stuEmail, stuPassword) VALUES (?, ?)";
+                $insert_query = "INSERT INTO student (stuName, stuPhoneNum, stuEmail, stuPassword) VALUES (?, ?, ?, ?)";
+                $stmt = $conn->prepare($insert_query);
+                $stmt->bind_param('ssss', $name, $phoneNum, $email, $hashedPassword);
             }
 
-            // Remove these duplicate lines causing the error:
-            // $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-            // $query = "INSERT INTO advisor (stuEmail, stuPassword) VALUES (?, ?)";
-            
-            $stmt = $conn->prepare($insert_query);
-            $stmt->bind_param('ss', $email, $hashedPassword);
             $stmt->execute();
 
             $_SESSION['success_message'] = "Account successfully created!";

@@ -42,12 +42,12 @@
             </a>
             <ul class="collapse list-unstyled submenu" id="profileSubmenu">
                 <li>
-                    <a href="admin-view-profile.php">
+                    <a href="advisor-viewprofile.php">
                         <i class="fas fa-id-card me-2"></i> View Profile
                     </a>
                 </li>
                 <li>
-                    <a href="admin-edit-profile.php">
+                    <a href="advisor-editprofile.php">
                         <i class="fas fa-user-edit me-2"></i> Edit Profile
                     </a>
                 </li>
@@ -100,6 +100,63 @@
                 </li>
             </ul>
         </li>
+
+         <!-- Event Management -->
+        <li class="sidebar-item">
+            <a href="#eventSubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed">
+                <i class="fas fa-calendar-alt me-2"></i>
+                <span>Manage Event</span>
+                <i class="fas fa-chevron-down ms-auto"></i>
+            </a>
+            <ul class="collapse list-unstyled submenu" id="eventSubmenu">
+                <li>
+                    <a href="Module2/EventList.php">
+                        <i class="fas fa-list-alt me-2"></i> List Event
+                    </a>
+                </li>
+                <li>
+                    <a href="Module2/EventRegistrationForm.php">
+                        <i class="fas fa-plus-circle me-2"></i> Register Event
+                    </a>
+                </li>
+                <li>
+                    <a href="admin-add-activity.php">
+                        <i class="fas fa-plus-circle me-2"></i> Committee Event
+                    </a>
+                </li>
+                <li>
+                    <a href="admin-add-activity.php">
+                        <i class="fas fa-plus-circle me-2"></i> Merit Event
+                    </a>
+                </li>
+                <li>
+                    <a href="admin-add-activity.php">
+                        <i class="fas fa-list-alt me-2"></i> QRCode Event
+                    </a>
+                </li>
+            </ul>
+        </li>
+
+        <!-- Manage Attendance Slot -->
+        <li class="sidebar-item">
+        <a href="#attendanceSubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed" aria-expanded="false" aria-controls="attendanceSubmenu">
+            <i class="fas fa-calendar-check me-2"></i>
+                <span>Manage Attendance Slot</span>
+            <i class="fas fa-chevron-down ms-auto"></i>
+        </a>
+        <ul class="collapse list-unstyled submenu" id="attendanceSubmenu">
+            <li>
+                <a href="Module 3/index.php">
+                    <i class="fas fa-eye me-2"></i> View Attendance Slot
+                </a>
+            </li>
+            <li>
+                <a href="Module 3/create_slot.php">
+                    <i class="fas fa-plus-circle me-2"></i> Create Attendance Slot
+                </a>
+            </li>
+        </ul>
+    </li>
 
         <!-- Divider -->
         <li class="sidebar-divider">
