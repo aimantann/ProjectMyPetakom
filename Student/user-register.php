@@ -60,6 +60,8 @@ include("includes/dbconnection.php");
 $error = "";
 
 if (isset($_POST['submit'])) {
+    $name = $_POST['name'];
+    $phoneNum = $_POST['phoneNum'];
     $email = $_POST['email'];
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
@@ -73,7 +75,7 @@ if (isset($_POST['submit'])) {
         // Check for existing email
         if ($role == "event_advisor") {
             $query = "SELECT * FROM advisor WHERE advEmail=?";
-        } elseif ($role == "petakom_coordinator") {
+        } elseif ($role == "petakom_coordinator" || $role == "admin") {
             $query = "SELECT * FROM admin WHERE adminEmail=?";
         } elseif ($role == "student") {
             $query = "SELECT * FROM student WHERE stuEmail=?";
@@ -88,19 +90,22 @@ if (isset($_POST['submit'])) {
             $error = "Email is already registered.";
         } else {
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            
             // Insert new user into the appropriate table
             if ($role == "event_advisor") {
-                $insert_query = "INSERT INTO advisor (advEmail, advPassword) VALUES (?, ?)";
-            } elseif ($role == "petakom_coordinator") {
+                $insert_query = "INSERT INTO advisor (advName, advPhoneNum, advEmail, advPassword) VALUES (?, ?, ?, ?)";
+                $stmt = $conn->prepare($insert_query);
+                $stmt->bind_param('ssss', $name, $phoneNum, $email, $hashedPassword);
+            } elseif ($role == "petakom_coordinator" || $role == "admin") {
                 $insert_query = "INSERT INTO admin (adminEmail, adminPassword) VALUES (?, ?)";
+                $stmt = $conn->prepare($insert_query);
+                $stmt->bind_param('ss', $email, $hashedPassword);
             } elseif ($role == "student") {
-                $insert_query = "INSERT INTO student (stuEmail, stuPassword) VALUES (?, ?)";
+                $insert_query = "INSERT INTO student (stuName, stuPhoneNum, stuEmail, stuPassword) VALUES (?, ?, ?, ?)";
+                $stmt = $conn->prepare($insert_query);
+                $stmt->bind_param('ssss', $name, $phoneNum, $email, $hashedPassword);
             }
 
-            $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-            $query = "INSERT INTO advisor (stuEmail, stuPassword) VALUES (?, ?)";
-            $stmt = $conn->prepare($insert_query);
-            $stmt->bind_param('ss', $email, $hashedPassword);
             $stmt->execute();
 
             $_SESSION['success_message'] = "Account successfully created!";
