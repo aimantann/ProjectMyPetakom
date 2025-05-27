@@ -101,6 +101,32 @@
             </ul>
         </li>
 
+        <!-- Merit Management -->
+        <li class="sidebar-item">
+            <a href="#meritSubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed">
+                <i class="fas fa-medal me-2"></i>
+                <span>Manage Merit</span>
+                <i class="fas fa-chevron-down ms-auto"></i>
+            </a>
+            <ul class="collapse list-unstyled submenu" id="meritSubmenu">
+                <li>
+                    <a href="student-view-merit.php">
+                        <i class="fas fa-eye me-2"></i> View Merit
+                    </a>
+                </li>
+                <li>
+                    <a href="student-claim-merit.php">
+                        <i class="fas fa-plus-circle me-2"></i> Claim Merit
+                    </a>
+                </li>
+                <li>
+                    <a href="student-my-merit-claims.php">
+                        <i class="fas fa-list-alt me-2"></i> My Merit Claims
+                    </a>
+                </li>
+            </ul>
+        </li>
+
         <!-- Divider -->
         <li class="sidebar-divider">
             <span class="sidebar-heading">Settings</span>
