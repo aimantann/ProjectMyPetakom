@@ -42,13 +42,13 @@
             </a>
             <ul class="collapse list-unstyled submenu" id="profileSubmenu">
                 <li>
-                    <a href="admin-view-profile.php">
-                        <i class="fas fa-id-card me-2"></i> View Profile
+                    <a href="admin-viewuserlist.php">
+                        <i class="fas fa-id-card me-2"></i> View User Profiles
                     </a>
                 </li>
                 <li>
-                    <a href="admin-edit-profile.php">
-                        <i class="fas fa-user-edit me-2"></i> Edit Profile
+                    <a href="admin-edituserlist.php">
+                        <i class="fas fa-user-edit me-2"></i> Edit User Profiles
                     </a>
                 </li>
             </ul>
