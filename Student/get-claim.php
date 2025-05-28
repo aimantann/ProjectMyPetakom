@@ -3,7 +3,7 @@ include("includes/dbconnection.php");
 
 if (isset($_GET['id'])) {
     $id = intval($_GET['id']);
-    $query = "SELECT * FROM student_claim_merit WHERE id = $id";
+    $query = "SELECT * FROM meritclaim WHERE MC_claimID = $id";
     $result = mysqli_query($conn, $query);
 
     if ($row = mysqli_fetch_assoc($result)) {
@@ -11,5 +11,7 @@ if (isset($_GET['id'])) {
     } else {
         echo json_encode(["error" => "Claim not found."]);
     }
+} else {
+    echo json_encode(["error" => "No ID provided."]);
 }
 ?>
