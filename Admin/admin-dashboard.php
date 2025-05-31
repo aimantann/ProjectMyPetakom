@@ -32,6 +32,21 @@ if (!isset($_SESSION['session_token']) || empty($_SESSION['session_token'])) {
 
 include('includes/header.php');
 include('includes/dbconnection.php');
+
+// --- ADDED: Fetch logged-in admin's name ---
+$user_name = '';
+if (isset($_SESSION['email'])) {
+    $user_email = $_SESSION['email'];
+    $query = "SELECT U_name FROM user WHERE U_email = ? LIMIT 1";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param('s', $user_email);
+    $stmt->execute();
+    $stmt->bind_result($db_name);
+    if ($stmt->fetch()) {
+        $user_name = $db_name;
+    }
+    $stmt->close();
+}
 ?>
 
 <!-- Add a meta tag to prevent back button navigation after logout -->

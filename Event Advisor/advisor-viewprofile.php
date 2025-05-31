@@ -31,7 +31,7 @@ if ($result->num_rows > 0) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>My Profile - Event Advisor</title>
+    <title><?php echo htmlspecialchars($advisor_data['U_name']); ?> - Event Advisor Profile</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         .header {
@@ -117,6 +117,13 @@ if ($result->num_rows > 0) {
         .success-message {
             margin-bottom: 20px;
         }
+        .my-profile-label {
+            font-weight: bold;
+            color: #155724;
+            font-size: 18px;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
     </style>
 </head>
 
@@ -146,10 +153,11 @@ if ($result->num_rows > 0) {
         ?>
         
         <div class="profile-header">
+            <div class="my-profile-label">My Profile</div>
             <div class="avatar">
                 <?php echo strtoupper(substr($advisor_data['U_name'], 0, 1)); ?>
             </div>
-            <h2 class="profile-title">My Profile</h2>
+            <h2 class="profile-title"><?php echo htmlspecialchars($advisor_data['U_name']); ?></h2>
             <span class="role-badge">Event Advisor</span>
         </div>
         
@@ -174,8 +182,6 @@ if ($result->num_rows > 0) {
                 <div class="info-value">Event Advisor</div>
             </div>
         </div>
-        
-
     </div>
 </div>
 

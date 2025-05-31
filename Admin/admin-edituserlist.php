@@ -39,6 +39,7 @@ if (isset($_GET['delete']) && isset($_GET['id'])) {
     <meta charset="UTF-8">
     <title>Edit Registered Users</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         .header {
             background: #f8f9fa;
@@ -81,6 +82,15 @@ if (isset($_GET['delete']) && isset($_GET['id'])) {
         .alert {
             margin-bottom: 20px;
         }
+        .btn-add-user {
+            background: #28a745;
+            border-color: #28a745;
+            font-weight: bold;
+        }
+        .btn-add-user:hover {
+            background: #218838;
+            border-color: #1e7e34;
+        }
     </style>
 </head>
 
@@ -102,7 +112,12 @@ if (isset($_GET['delete']) && isset($_GET['id'])) {
 
 <div class="container-main">
     <div class="table-container">
-        <h2 class="page-title">Edit Registered Users</h2>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="page-title mb-0">Edit Registered Users</h2>
+            <a href="admin-createuser.php" class="btn btn-success btn-add-user">
+                <i class="fas fa-plus"></i> Add New User
+            </a>
+        </div>
         
         <?php
         if (isset($_SESSION['success_message'])) {
@@ -130,13 +145,19 @@ if (isset($_GET['delete']) && isset($_GET['id'])) {
                 <tbody>
                     <?php
                     $counter = 1;
-                    // Get all users with their roles
-                    $query = "SELECT u.*, COALESCE(sp.SP_Role, u.U_usertype) as role_type
+                    // Get all users with their roles - improved query
+                    $query = "SELECT u.*, 
+                                     s.SP_ID,
+                                     sp.SP_Role,
+                                     CASE 
+                                         WHEN s.U_userID IS NOT NULL THEN sp.SP_Role
+                                         ELSE u.U_usertype
+                                     END as role_type
                               FROM user u
                               LEFT JOIN staff s ON u.U_userID = s.U_userID
                               LEFT JOIN staffposition sp ON s.SP_ID = sp.SP_ID
                               WHERE u.U_userID != ?
-                              ORDER BY role_type, u.U_name";
+                              ORDER BY u.U_name";
                     $stmt = $conn->prepare($query);
                     $stmt->bind_param('i', $_SESSION['user_id']);
                     $stmt->execute();
@@ -146,10 +167,17 @@ if (isset($_GET['delete']) && isset($_GET['id'])) {
                         while ($row = $result->fetch_assoc()) {
                             $role_display = '';
                             $role_class = '';
-                            if ($row['role_type'] == 'admin') {
+                            
+                            // Debug: Check what values we're getting
+                            $role_type = $row['role_type'];
+                            $sp_role = $row['SP_Role'];
+                            $usertype = $row['U_usertype'];
+                            
+                            // Determine role based on your actual database SP_ID values
+                            if ($row['SP_ID'] == 2 || $role_type == 'admin' || $sp_role == 'admin') {
                                 $role_display = 'Administrator';
                                 $role_class = 'role-admin';
-                            } elseif ($row['role_type'] == 'event_advisor') {
+                            } elseif ($row['SP_ID'] == 3 || $role_type == 'event_advisor' || $sp_role == 'event_advisor') {
                                 $role_display = 'Event Advisor';
                                 $role_class = 'role-advisor';
                             } else {

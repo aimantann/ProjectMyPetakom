@@ -1,3 +1,33 @@
+<?php
+// --- ADDED: Fetch name and role for sidebar display ---
+if (!isset($conn)) {
+    include('includes/dbconnection.php');
+}
+$user_name = '';
+$user_role = '';
+if (isset($_SESSION['email'])) {
+    $user_email = $_SESSION['email'];
+    $query = "SELECT U_name, U_usertype FROM user WHERE U_email = ? LIMIT 1";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param('s', $user_email);
+    $stmt->execute();
+    $stmt->bind_result($db_name, $db_role);
+    if ($stmt->fetch()) {
+        $user_name = $db_name;
+        // Format role for display
+        if ($db_role === 'event_advisor') {
+            $user_role = 'Event Advisor';
+        } else if ($db_role === 'admin') {
+            $user_role = 'Administrator';
+        } else if ($db_role === 'student') {
+            $user_role = 'Student';
+        } else {
+            $user_role = ucfirst($db_role);
+        }
+    }
+    $stmt->close();
+}
+?>
 <nav id="sidebar" class="sidebar">
     <!-- Sidebar Header -->
     <div class="sidebar-header">
@@ -13,8 +43,9 @@
             <img src="images/arep.jpg" alt="  User" class="rounded-circle">
         </div>
         <div class="user-info">
-            <h6 class="mb-0">Event Advisor</h6>
-            <span class="user-role">Advisor</span>
+            <!-- CHANGED: Show logged-in user's name and role -->
+            <h6 class="mb-0"><?php echo htmlspecialchars($user_name ?: 'Event Advisor'); ?></h6>
+            <span class="user-role"><?php echo htmlspecialchars($user_role ?: 'Advisor'); ?></span>
         </div>
     </div>
 

@@ -1,12 +1,28 @@
+<?php
+
+if (!isset($conn)) {
+    include('includes/dbconnection.php');
+}
+$user_name = '';
+if (isset($_SESSION['email'])) {
+    $user_email = $_SESSION['email'];
+    $query = "SELECT U_name FROM user WHERE U_email = ? LIMIT 1";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param('s', $user_email);
+    $stmt->execute();
+    $stmt->bind_result($db_name);
+    if ($stmt->fetch()) {
+        $user_name = $db_name;
+    }
+    $stmt->close();
+}
+?>
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
     <div class="container-fluid">
         <!-- Sidebar Toggle Button -->
         <button type="button" id="sidebarToggle" class="btn btn-light border rounded-circle">
             <i class="fas fa-bars"></i>
         </button>
-        
-        <!-- Page Title -->
-        <span class="navbar-brand mb-0 h1 ms-3">Admin Dashboard</span>
         
         <!-- Navbar Right Side -->
         <div class="ms-auto d-flex align-items-center">
@@ -41,18 +57,10 @@
             </div> -->
             
             <!-- User Profile -->
-            <div class="dropdown">
-                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <!-- <img src="images/avatar-placeholder.jpg" class="rounded-circle me-2" width="32" height="32" alt="User"> -->
-                    <span class="d-none d-sm-inline">Admin</span>
-                </a>
-                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
-                    <li><a class="dropdown-item" href="admin-view-profile.php"><i class="fas fa-user me-2"></i> Profile</a></li>
-                    <li><a class="dropdown-item" href="admin-settings.php"><i class="fas fa-cog me-2"></i> Settings</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="user-logout.php"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
-                </ul>
-            </div>
+            <!-- REMOVED: Dropdown menu, replaced with Hello message -->
+            <span class="ms-3 fw-bold text-dark h5 mb-0">
+                Welcome back, <?php echo htmlspecialchars($user_name ?: 'Admin'); ?>
+            </span>
         </div>
     </div>
 </nav>

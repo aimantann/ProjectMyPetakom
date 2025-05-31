@@ -31,11 +31,11 @@ if ($result->num_rows > 0) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>My Profile - Student</title>
+    <title><?php echo htmlspecialchars($student_data['U_name']); ?> - Student Profile</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         .header {
-            background: #007bff;
+            background: #789DBC;
             color: white;
             padding: 20px 0;
             margin-bottom: 30px;
@@ -64,7 +64,7 @@ if ($result->num_rows > 0) {
             margin-bottom: 10px;
         }
         .role-badge {
-            background: #007bff;
+            background: #789DBC;
             color: white;
             padding: 8px 20px;
             border-radius: 20px;
@@ -104,7 +104,7 @@ if ($result->num_rows > 0) {
         .avatar {
             width: 100px;
             height: 100px;
-            background: #007bff;
+            background: #789DBC;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -113,6 +113,13 @@ if ($result->num_rows > 0) {
             font-size: 36px;
             color: white;
             font-weight: bold;
+        }
+        .my-profile-label {
+            font-weight: bold;
+            color: #789DBC;
+            font-size: 18px;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
         }
     </style>
 </head>
@@ -136,10 +143,11 @@ if ($result->num_rows > 0) {
 <div class="container-main">
     <div class="profile-container">
         <div class="profile-header">
+            <div class="my-profile-label">My Profile</div>
             <div class="avatar">
                 <?php echo strtoupper(substr($student_data['U_name'], 0, 1)); ?>
             </div>
-            <h2 class="profile-title">My Profile</h2>
+            <h2 class="profile-title"><?php echo htmlspecialchars($student_data['U_name']); ?></h2>
             <span class="role-badge">Student</span>
         </div>
         

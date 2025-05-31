@@ -57,6 +57,21 @@ include('includes/header.php');
 // Include database connection file
 include('includes/dbconnection.php');
 
+// --- ADDED: Fetch logged-in student's name ---
+$user_name = '';
+if (isset($_SESSION['email'])) {
+    $user_email = $_SESSION['email'];
+    $query = "SELECT U_name FROM user WHERE U_email = ? LIMIT 1";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param('s', $user_email);
+    $stmt->execute();
+    $stmt->bind_result($db_name);
+    if ($stmt->fetch()) {
+        $user_name = $db_name;
+    }
+    $stmt->close();
+}
+
 ?>
 
 <!-- Add meta tags to prevent back button navigation after logout -->
@@ -67,7 +82,7 @@ include('includes/dbconnection.php');
 <!-- Dashboard content container -->
 <div class="container-fluid">
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">Student Dashboard</h1>
+        <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
     </div>
     
     <!-- Dashboard content goes here -->
