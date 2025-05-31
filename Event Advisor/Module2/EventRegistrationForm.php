@@ -4,6 +4,14 @@ session_start();
 // Include DB connection
 require_once '../includes/dbconnection.php'; 
 
+// Ensure user is logged in
+if (!isset($_SESSION['user_id'])) {
+    $_SESSION['message'] = "Please log in first.";
+    $_SESSION['message_type'] = "warning";
+    header("Location: ../login.php");
+    exit();
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $event_name = trim($_POST['event_name']);
@@ -13,21 +21,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $geo_location = trim($_POST['geo_location']);
     $event_status = $_POST['event_status'];
     $event_level = $_POST['event_level'];
-    
+    $user_id = $_SESSION['user_id']; // Get user ID from session
+
     $upload_dir = 'uploads/approval_letters/';
     $approval_letter = '';
-    
+
     // Create upload directory if it doesn't exist
     if (!file_exists($upload_dir)) {
         mkdir($upload_dir, 0777, true);
     }
-    
+
     // Handle file upload for approval letter
     if (isset($_FILES['approval_letter']) && $_FILES['approval_letter']['error'] == 0) {
         $file_extension = pathinfo($_FILES['approval_letter']['name'], PATHINFO_EXTENSION);
         $new_filename = 'approval_' . time() . '.' . $file_extension;
         $upload_path = $upload_dir . $new_filename;
-        
+
         // Validate file type
         $allowed_types = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'];
         if (in_array(strtolower($file_extension), $allowed_types)) {
@@ -42,15 +51,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['message_type'] = "danger";
         }
     }
-    
+
     // Insert event into database
     if (empty($_SESSION['message'])) {
-        $sql = "INSERT INTO event (E_name, E_description, E_startDate, E_endDate, E_geoLocation, E_eventStatus, E_approvalLetter, E_level) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO event (E_name, E_description, E_startDate, E_endDate, E_geoLocation, E_eventStatus, E_approvalLetter, E_level, U_userID) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ssssssss", $event_name, $description, $start_date, $end_date, $geo_location, $event_status, $approval_letter, $event_level);
-        
+        $stmt->bind_param("ssssssssi", $event_name, $description, $start_date, $end_date, $geo_location, $event_status, $approval_letter, $event_level, $user_id);
+
         if ($stmt->execute()) {
             $_SESSION['message'] = "Event registered successfully!";
             $_SESSION['message_type'] = "success";

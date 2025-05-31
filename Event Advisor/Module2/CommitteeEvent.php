@@ -1,8 +1,23 @@
+<?php
+// DB connection
+$conn = new mysqli("localhost", "root", "", "mypetakom_db");
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Fetch registered events
+$eventQuery = "SELECT E_eventID, E_name, E_startDate FROM event";
+$eventResult = $conn->query($eventQuery);
+
+// Fetch registered students
+$studentQuery = "SELECT U_userID, U_name FROM user WHERE U_usertype = 'Student'";
+$studentResult = $conn->query($studentQuery);
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assign Committee | MyPetakom</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -28,150 +43,94 @@
     </style>
 </head>
 <body>
-    <div class="container py-4">
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <form id="committeeForm">
-                    <div class="card border-0 shadow">
-                        <div class="card-header bg-primary text-white">
-                            <h4 class="mb-0">Assign Committee Member</h4>
+    
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <form id="committeeForm" method="POST" action="process_committee.php">
+                <div class="card border-0 shadow">
+                    
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+             <h4 class="mb-0">Assign Committee Member</h4>
+            <a href="../advisor-dashboard.php" class="btn btn-light btn-sm">Dashboard</a>
+        </div>
+                    <div class="card-body">
+                        <!-- 1. Select Event -->
+                        <div class="mb-4">
+                            <h5>1. Select Event</h5>
+                            <select class="form-select mt-2" id="E_eventID" name="E_eventID" required>
+                                <option value="" selected disabled>Choose an event...</option>
+                                <?php while ($row = $eventResult->fetch_assoc()): ?>
+                                    <option value="<?= $row['E_eventID'] ?>">
+                                        <?= htmlspecialchars($row['E_name']) ?> - <?= date('M d', strtotime($row['E_startDate'])) ?>
+                                    </option>
+                                <?php endwhile; ?>
+                            </select>
                         </div>
-                        
-                        <div class="card-body">
-                            <!-- Hidden field for committee ID -->
-                            <input type="hidden" id="C_committeeID" name="C_committeeID">
-                            
-                            <!-- Step 1: Select Event (E_eventID) -->
-                            <div class="mb-4">
-                                <h5>1. Select Event</h5>
-                                <select class="form-select mt-2" id="E_eventID" name="E_eventID" required>
-                                    <option value="" selected disabled>Choose an event...</option>
-                                    <option value="1">Leadership Workshop - Nov 15</option>
-                                    <option value="2">Community Service - Dec 5</option>
-                                    <option value="3">Tech Challenge - Jan 20</option>
-                                </select>
-                            </div>
-                            
-                            <!-- Step 2: Select Student (U_userID) -->
-                            <div class="mb-4">
-                                <h5>2. Select Student</h5>
-                                <div class="input-group mt-2">
-                                    <input type="text" class="form-control" placeholder="Search students...">
-                                    <button class="btn btn-outline-secondary" type="button">
-                                        <i class="bi bi-search"></i>
-                                    </button>
+
+                        <!-- 2. Select Student -->
+<div class="mb-4">
+    <h5>2. Select Student</h5>
+    <input type="text" class="form-control mb-2" id="searchInput" placeholder="Search students...">
+    <div id="studentList">
+        <?php while ($student = $studentResult->fetch_assoc()): ?>
+            <div class="card student-card" data-userid="<?= $student['U_userID'] ?>">
+                <div class="card-body py-2">
+                    <h6 class="card-title mb-1"><?= htmlspecialchars($student['U_name']) ?></h6>
+                </div>
+            </div>
+        <?php endwhile; ?>
+    </div>
+    <input type="hidden" id="U_userID" name="U_userID" required>
+</div>
+
+
+                        <!-- 3. Assign Position -->
+                        <div class="mb-3">
+                            <h5>3. Assign Position</h5>
+                            <div class="row mt-2">
+                                <div class="col-md-8">
+                                    <select class="form-select" id="C_position" name="C_position" required>
+                                        <option value="" selected disabled>Select committee role...</option>
+                                        <option value="Main Committee">Main Committee</option>
+                                        <option value="Committee">Committee</option>
+                                    </select>
                                 </div>
-                                <div id="studentList" class="mt-3">
-                                    <!-- Student cards with U_userID as data attribute -->
-                                    <div class="card student-card" data-userid="101">
-                                        <div class="card-body py-2">
-                                            <h6 class="card-title mb-1">Ali bin Ahmad</h6>
-                                            <small class="text-muted">AB12345</small>
-                                        </div>
-                                    </div>
-                                    <div class="card student-card" data-userid="102">
-                                        <div class="card-body py-2">
-                                            <h6 class="card-title mb-1">Siti binti Mohd</h6>
-                                            <small class="text-muted">CD67890</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <input type="hidden" id="U_userID" name="U_userID" required>
-                            </div>
-                            
-                            <!-- Step 3: Assign Position (C_position) -->
-                            <div class="mb-3">
-                                <h5>3. Assign Position</h5>
-                                <div class="row mt-2">
-                                    <div class="col-md-8">
-                                        <select class="form-select" id="C_position" name="C_position" required>
-                                            <option value="" selected disabled>Select committee role...</option>
-                                            <option value="Chairperson">Main Committee</option>
-                                            <option value="Vice Chair">Committee</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <button type="submit" class="btn btn-primary w-100">
-                                            Assign
-                                        </button>
-                                    </div>
+                                <div class="col-md-4">
+                                    <button type="submit" class="btn btn-primary w-100">Assign</button>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('committeeForm');
-            const studentCards = document.querySelectorAll('.student-card');
-            const userIDField = document.getElementById('U_userID');
-            
-            // Student selection
-            studentCards.forEach(card => {
-                card.addEventListener('click', function() {
-                    // Remove selection from all cards
-                    studentCards.forEach(c => c.classList.remove('selected'));
-                    
-                    // Add selection to clicked card
-                    this.classList.add('selected');
-                    
-                    // Set the U_userID value
-                    userIDField.value = this.getAttribute('data-userid');
-                });
-            });
-            
-            // Form submission
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                if (!userIDField.value) {
-                    alert('Please select a student');
-                    return;
-                }
-                
-                // Prepare form data according to your table structure
-                const formData = {
-                    C_committeeID: document.getElementById('C_committeeID').value,
-                    C_position: document.getElementById('C_position').value,
-                    U_userID: userIDField.value,
-                    E_eventID: document.getElementById('E_eventID').value
-                };
-                
-                console.log('Submitting:', formData);
-                
-                // In a real application, you would send this to your backend
-                // Example using fetch:
-                /*
-                fetch('/api/committee', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    alert('Assignment successful!');
-                    form.reset();
-                    studentCards.forEach(c => c.classList.remove('selected'));
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-                */
-                
-                // For demo purposes:
-                alert(`Assignment submitted:\nEvent ID: ${formData.E_eventID}\nUser ID: ${formData.U_userID}\nPosition: ${formData.C_position}`);
-                form.reset();
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const studentCards = document.querySelectorAll('.student-card');
+        const userIDField = document.getElementById('U_userID');
+
+        studentCards.forEach(card => {
+            card.addEventListener('click', function () {
                 studentCards.forEach(c => c.classList.remove('selected'));
-                userIDField.value = '';
+                this.classList.add('selected');
+                userIDField.value = this.getAttribute('data-userid');
             });
         });
-    </script>
+
+        // Filter students
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('keyup', function () {
+            const keyword = this.value.toLowerCase();
+            studentCards.forEach(card => {
+                const name = card.textContent.toLowerCase();
+                card.style.display = name.includes(keyword) ? 'block' : 'none';
+            });
+        });
+    });
+</script>
 </body>
 </html>

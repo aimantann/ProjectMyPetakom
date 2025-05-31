@@ -157,6 +157,23 @@ if (isset($_SESSION['email'])) {
             </ul>
         </li>
 
+
+         <!-- Manage Event Attendance -->
+         <li class="sidebar-item">
+                <a href="#attendanceSubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed">
+                    <i class="fas fa-calendar-check me-2"></i>
+                    <span>Manage Event Attendance</span>
+                    <i class="fas fa-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse list-unstyled submenu" id="attendanceSubmenu">
+                    <li>
+                        <a href="../Student/scan_qr.php">
+                            <i class="fas fa-qrcode me-2"></i> Scan QR Code
+                        </a>
+                    </li>
+                 </ul>
+             </li>
+
         <!-- Divider -->
         <li class="sidebar-divider">
             <span class="sidebar-heading">Settings</span>

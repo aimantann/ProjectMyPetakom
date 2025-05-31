@@ -151,17 +151,17 @@ if (isset($_SESSION['email'])) {
                     </a>
                 </li>
                 <li>
-                    <a href="CommitteeEvent.php">
+                    <a href="Module2/CommitteeEvent.php">
                         <i class="fas fa-plus-circle me-2"></i> Committee Event
                     </a>
                 </li>
                 <li>
-                    <a href="admin-add-activity.php">
+                    <a href="Module2/MeritEvent.php">
                         <i class="fas fa-plus-circle me-2"></i> Merit Event
                     </a>
                 </li>
                 <li>
-                    <a href="admin-add-activity.php">
+                    <a href="Module2/QRevent.php">
                         <i class="fas fa-list-alt me-2"></i> QRCode Event
                     </a>
                 </li>
