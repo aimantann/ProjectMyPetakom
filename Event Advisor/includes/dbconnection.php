@@ -1,9 +1,9 @@
 <?php
 $servername = "localhost";
-$username = "root"; // Your database username
-$password = ""; // Your database password
-$dbname = "mypetakom";
-// Your database port
+$username = "root"; // database username
+$password = ""; // database password
+$dbname = "mypetakom_db";
+// database port
 
 // Create connection
 $conn = mysqli_connect($servername, $username, $password, $dbname);

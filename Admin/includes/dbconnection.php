@@ -2,7 +2,7 @@
 $servername = "localhost";
 $username = "root"; // Your database username
 $password = ""; // Your database password
-$dbname = "mypetakom"; // Your database name
+$dbname = "mypetakom_db"; // Your database name
 
 
 // Create connection

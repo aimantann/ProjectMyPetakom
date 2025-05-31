@@ -2,7 +2,7 @@
 $host = "localhost";
 $user = "root";
 $password = "";
-$dbname = "mypetakom";
+$dbname = "mypetakom_db";
 
 
 
