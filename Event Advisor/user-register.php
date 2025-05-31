@@ -67,20 +67,18 @@ if (isset($_POST['submit'])) {
     $confirm_password = $_POST['confirm_password'];
     $role = $_POST['role'];
 
+    // Map role to user table value
+    if ($role == "event_advisor") $role_db = "event_advisor";
+    elseif ($role == "student") $role_db = "student";
+    else $role_db = "";
+
     if ($password != $confirm_password) {
         $error = "Passwords do not match.";
-    } elseif ($role == "") {
+    } elseif ($role_db == "") {
         $error = "Please select a role.";
     } else {
-        // Check for existing email
-        if ($role == "event_advisor") {
-            $query = "SELECT * FROM advisor WHERE advEmail=?";
-        } elseif ($role == "petakom_coordinator" || $role == "admin") {
-            $query = "SELECT * FROM admin WHERE adminEmail=?";
-        } elseif ($role == "student") {
-            $query = "SELECT * FROM student WHERE stuEmail=?";
-        }
-
+        // Check for existing email in user table
+        $query = "SELECT U_userID FROM user WHERE U_email=?";
         $stmt = $conn->prepare($query);
         $stmt->bind_param('s', $email);
         $stmt->execute();
@@ -90,23 +88,46 @@ if (isset($_POST['submit'])) {
             $error = "Email is already registered.";
         } else {
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            
-            // Insert new user into the appropriate table
-            if ($role == "event_advisor") {
-                $insert_query = "INSERT INTO advisor (advName, advPhoneNum, advEmail, advPassword) VALUES (?, ?, ?, ?)";
-                $stmt = $conn->prepare($insert_query);
-                $stmt->bind_param('ssss', $name, $phoneNum, $email, $hashedPassword);
-            } elseif ($role == "petakom_coordinator" || $role == "admin") {
-                $insert_query = "INSERT INTO admin (adminEmail, adminPassword) VALUES (?, ?)";
-                $stmt = $conn->prepare($insert_query);
-                $stmt->bind_param('ss', $email, $hashedPassword);
-            } elseif ($role == "student") {
-                $insert_query = "INSERT INTO student (stuName, stuPhoneNum, stuEmail, stuPassword) VALUES (?, ?, ?, ?)";
-                $stmt = $conn->prepare($insert_query);
-                $stmt->bind_param('ssss', $name, $phoneNum, $email, $hashedPassword);
-            }
 
+            // Insert new user into user table
+            $insert_query = "INSERT INTO user (U_name, U_phoneNum, U_email, U_password, U_usertype) VALUES (?, ?, ?, ?, ?)";
+            $stmt = $conn->prepare($insert_query);
+            $stmt->bind_param('sssss', $name, $phoneNum, $email, $hashedPassword, $role_db);
             $stmt->execute();
+            $new_user_id = $stmt->insert_id;
+
+            // If event advisor, insert into staff/staffposition if needed
+            if ($role_db == "event_advisor") {
+                // Insert staffposition if SP_Role does not exist
+                $sp_query = "SELECT SP_ID FROM staffposition WHERE SP_Role=?";
+                $stmt = $conn->prepare($sp_query);
+                $sp_role = "event_advisor";
+                $stmt->bind_param('s', $sp_role);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                if ($row = $result->fetch_assoc()) {
+                    $sp_id = $row['SP_ID'];
+                } else {
+                    $insert_sp = "INSERT INTO staffposition (SP_Role) VALUES (?)";
+                    $stmt = $conn->prepare($insert_sp);
+                    $stmt->bind_param('s', $sp_role);
+                    $stmt->execute();
+                    $sp_id = $stmt->insert_id;
+                }
+                // Insert staff
+                $insert_staff = "INSERT INTO staff (U_userID, SP_ID) VALUES (?, ?)";
+                $stmt = $conn->prepare($insert_staff);
+                $stmt->bind_param('ii', $new_user_id, $sp_id);
+                $stmt->execute();
+            }
+            // If student, insert into student table
+            if ($role_db == "student") {
+                $today = date('Y-m-d');
+                $insert_student = "INSERT INTO student (U_userID, STU_registrationDate) VALUES (?, ?)";
+                $stmt = $conn->prepare($insert_student);
+                $stmt->bind_param('is', $new_user_id, $today);
+                $stmt->execute();
+            }
 
             $_SESSION['success_message'] = "Account successfully created!";
             header("Location: user-login.php");
@@ -162,7 +183,7 @@ if (isset($_POST['submit'])) {
                     <button type="submit" name="submit" class="btn btn-primary btn-block">Register</button>
                 </div>
                 <div class="form-group text-center">
-                    <a href="../Admin/user-login.php">Already have an account? Login</a>
+                    <a href="user-login.php">Already have an account? Login</a>
                 </div>
             </form>
         </div>

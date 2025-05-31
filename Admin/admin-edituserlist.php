@@ -2,29 +2,32 @@
 session_start();
 include("includes/dbconnection.php");
 
-
 // Handle delete action
-if (isset($_GET['delete']) && isset($_GET['role']) && isset($_GET['email'])) {
-    $email = $_GET['email'];
-    $role = $_GET['role'];
-    
-    if ($role == 'advisor') {
-        $delete_query = "DELETE FROM advisor WHERE advEmail = ?";
-    } elseif ($role == 'student') {
-        $delete_query = "DELETE FROM student WHERE stuEmail = ?";
-    } elseif ($role == 'admin') {
-        $delete_query = "DELETE FROM admin WHERE adminEmail = ?";
-    }
-    
-    $stmt = $conn->prepare($delete_query);
-    $stmt->bind_param('s', $email);
-    
+if (isset($_GET['delete']) && isset($_GET['id'])) {
+    $user_id = $_GET['id'];
+
+    // Delete from specific tables first to preserve referential integrity
+    $delete_staff = "DELETE FROM staff WHERE U_userID = ?";
+    $stmt = $conn->prepare($delete_staff);
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+
+    $delete_student = "DELETE FROM student WHERE U_userID = ?";
+    $stmt = $conn->prepare($delete_student);
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+
+    // Delete from user table
+    $delete_user = "DELETE FROM user WHERE U_userID = ?";
+    $stmt = $conn->prepare($delete_user);
+    $stmt->bind_param('i', $user_id);
+
     if ($stmt->execute()) {
         $_SESSION['success_message'] = "User deleted successfully!";
     } else {
         $_SESSION['error_message'] = "Error deleting user.";
     }
-    
+
     header("Location: admin-edituserlist.php");
     exit();
 }
@@ -127,71 +130,46 @@ if (isset($_GET['delete']) && isset($_GET['role']) && isset($_GET['email'])) {
                 <tbody>
                     <?php
                     $counter = 1;
-                    
-                    // Get all advisors
-                    $advisor_query = "SELECT advName as name, advPhoneNum as phone, advEmail as email, 'advisor' as role_type, 'Event Advisor' as role_display FROM advisor";
-                    $advisor_result = $conn->query($advisor_query);
-                    
-                    if ($advisor_result->num_rows > 0) {
-                        while ($row = $advisor_result->fetch_assoc()) {
-                            echo "<tr>";
-                            echo "<td>" . $counter++ . "</td>";
-                            echo "<td>" . htmlspecialchars($row['name']) . "</td>";
-                            echo "<td>" . htmlspecialchars($row['phone']) . "</td>";
-                            echo "<td>" . htmlspecialchars($row['email']) . "</td>";
-                            echo "<td><span class='role-badge role-advisor'>" . $row['role_display'] . "</span></td>";
-                            echo "<td class='action-buttons'>";
-                            echo "<a href='admin-edituserform.php?email=" . urlencode($row['email']) . "&role=" . $row['role_type'] . "' class='btn btn-warning btn-sm'>Edit</a>";
-                            echo "<a href='admin-edituserlist.php?delete=1&email=" . urlencode($row['email']) . "&role=" . $row['role_type'] . "' class='btn btn-danger btn-sm' onclick='return confirm(\"Are you sure you want to delete this user?\")'>Delete</a>";
-                            echo "</td>";
-                            echo "</tr>";
-                        }
-                    }
-                    
-                    // Get all students
-                    $student_query = "SELECT stuName as name, stuPhoneNum as phone, stuEmail as email, 'student' as role_type, 'Student' as role_display FROM student";
-                    $student_result = $conn->query($student_query);
-                    
-                    if ($student_result->num_rows > 0) {
-                        while ($row = $student_result->fetch_assoc()) {
-                            echo "<tr>";
-                            echo "<td>" . $counter++ . "</td>";
-                            echo "<td>" . htmlspecialchars($row['name']) . "</td>";
-                            echo "<td>" . htmlspecialchars($row['phone']) . "</td>";
-                            echo "<td>" . htmlspecialchars($row['email']) . "</td>";
-                            echo "<td><span class='role-badge role-student'>" . $row['role_display'] . "</span></td>";
-                            echo "<td class='action-buttons'>";
-                            echo "<a href='admin-edituserform.php?email=" . urlencode($row['email']) . "&role=" . $row['role_type'] . "' class='btn btn-warning btn-sm'>Edit</a>";
-                            echo "<a href='admin-edituserlist.php?delete=1&email=" . urlencode($row['email']) . "&role=" . $row['role_type'] . "' class='btn btn-danger btn-sm' onclick='return confirm(\"Are you sure you want to delete this user?\")'>Delete</a>";
-                            echo "</td>";
-                            echo "</tr>";
-                        }
-                    }
-                    
-                    // Get all admins (excluding current admin)
-                    $admin_query = "SELECT adminEmail as email, 'admin' as role_type, 'Administrator' as role_display FROM admin WHERE adminEmail != ?";
-                    $stmt = $conn->prepare($admin_query);
-                    $stmt->bind_param('s', $_SESSION['email']);
+                    // Get all users with their roles
+                    $query = "SELECT u.*, COALESCE(sp.SP_Role, u.U_usertype) as role_type
+                              FROM user u
+                              LEFT JOIN staff s ON u.U_userID = s.U_userID
+                              LEFT JOIN staffposition sp ON s.SP_ID = sp.SP_ID
+                              WHERE u.U_userID != ?
+                              ORDER BY role_type, u.U_name";
+                    $stmt = $conn->prepare($query);
+                    $stmt->bind_param('i', $_SESSION['user_id']);
                     $stmt->execute();
-                    $admin_result = $stmt->get_result();
-                    
-                    if ($admin_result->num_rows > 0) {
-                        while ($row = $admin_result->fetch_assoc()) {
+                    $result = $stmt->get_result();
+
+                    if ($result->num_rows > 0) {
+                        while ($row = $result->fetch_assoc()) {
+                            $role_display = '';
+                            $role_class = '';
+                            if ($row['role_type'] == 'admin') {
+                                $role_display = 'Administrator';
+                                $role_class = 'role-admin';
+                            } elseif ($row['role_type'] == 'event_advisor') {
+                                $role_display = 'Event Advisor';
+                                $role_class = 'role-advisor';
+                            } else {
+                                $role_display = 'Student';
+                                $role_class = 'role-student';
+                            }
+
                             echo "<tr>";
                             echo "<td>" . $counter++ . "</td>";
-                            echo "<td>N/A</td>";
-                            echo "<td>N/A</td>";
-                            echo "<td>" . htmlspecialchars($row['email']) . "</td>";
-                            echo "<td><span class='role-badge role-admin'>" . $row['role_display'] . "</span></td>";
+                            echo "<td>" . htmlspecialchars($row['U_name'] ?? 'N/A') . "</td>";
+                            echo "<td>" . htmlspecialchars($row['U_phoneNum'] ?? 'N/A') . "</td>";
+                            echo "<td>" . htmlspecialchars($row['U_email']) . "</td>";
+                            echo "<td><span class='role-badge $role_class'>" . $role_display . "</span></td>";
                             echo "<td class='action-buttons'>";
-                            echo "<a href='admin-edituserform.php?email=" . urlencode($row['email']) . "&role=" . $row['role_type'] . "' class='btn btn-warning btn-sm'>Edit</a>";
-                            echo "<a href='admin-edituserlist.php?delete=1&email=" . urlencode($row['email']) . "&role=" . $row['role_type'] . "' class='btn btn-danger btn-sm' onclick='return confirm(\"Are you sure you want to delete this user?\")'>Delete</a>";
+                            echo "<a href='admin-edituserform.php?id=" . urlencode($row['U_userID']) . "' class='btn btn-warning btn-sm'>Edit</a>";
+                            echo "<a href='admin-edituserlist.php?delete=1&id=" . urlencode($row['U_userID']) . "' class='btn btn-danger btn-sm' onclick='return confirm(\"Are you sure you want to delete this user?\")'>Delete</a>";
                             echo "</td>";
                             echo "</tr>";
                         }
-                    }
-                    
-                    if ($counter == 1) {
+                    } else {
                         echo "<tr><td colspan='6' class='text-center'>No users found</td></tr>";
                     }
                     ?>

@@ -25,71 +25,58 @@ if (isset($_POST['submit'])) {
     $password = $_POST['password'];
     $role = $_POST['role'];  // Capture role from the form
 
+    // Map form role values to U_usertype values
+    if ($role == "event_advisor") $role_db = "event_advisor";
+    elseif ($role == "petakom_coordinator") $role_db = "admin";
+    elseif ($role == "student") $role_db = "student";
+    else $role_db = "";
+
     // Check if inputs are not empty
     if (empty($email) || empty($password) || empty($role)) {
         $error = "All fields are required.";
     } else {
-        // Modify the query based on the role selected - now only checking email
-        if ($role == "event_advisor") {
-            $query = "SELECT * FROM advisor WHERE advEmail=?";
-        } elseif ($role == "petakom_coordinator") {
-            $query = "SELECT * FROM admin WHERE adminEmail=?";
-        } elseif ($role == "student") {
-            $query = "SELECT * FROM student WHERE stuEmail=?";
-        } else {
-            $error = "Invalid role selected.";
-        }
+        // Unified query for user table
+        $query = "SELECT * FROM user WHERE U_email=? AND U_usertype=?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param('ss', $email, $role_db);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
 
-        // Execute the query if the role is valid
-        if ($role == "event_advisor" || $role == "petakom_coordinator" || $role == "student") {
-            $stmt = $conn->prepare($query);
-            $stmt->bind_param('s', $email);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $row = $result->fetch_assoc();
+        if ($row) {
+            $hashedPassword = $row['U_password'];
 
-            if ($row) {
-                // Verify password against the hashed password in database
-                $hashedPassword = '';
+            if (password_verify($password, $hashedPassword)) {
+                // Generate a new session ID to prevent session fixation attacks
+                session_regenerate_id(true);
+                
+                $_SESSION['user_logged_in'] = true; // Mark the user as logged in
+                $_SESSION['email'] = $email; 
+                $_SESSION['role'] = $role_db;
+                $_SESSION['user_id'] = $row['U_userID'];
+                
+                // Create a session token for added security
+                $_SESSION['session_token'] = bin2hex(random_bytes(32));
+                
+                // Set the last activity time for session timeout handling
+                $_SESSION['last_activity'] = time();
+
+                // Redirect to the corresponding dashboard based on the role
                 if ($role == "event_advisor") {
-                    $hashedPassword = $row['advPassword'];
+                    header("Location: ../Event Advisor/advisor-dashboard.php");
                 } elseif ($role == "petakom_coordinator") {
-                    $hashedPassword = $row['adminPassword'];
+                    header("Location: ../Admin/admin-dashboard.php");
                 } elseif ($role == "student") {
-                    $hashedPassword = $row['stuPassword'];
+                    header("Location: student-dashboard.php");
                 }
-
-                if (password_verify($password, $hashedPassword)) {
-                    // Generate a new session ID to prevent session fixation attacks
-                    session_regenerate_id(true);
-                    
-                    $_SESSION['user_logged_in'] = true; // Mark the user as logged in
-                    $_SESSION['email'] = $email; 
-                    $_SESSION['role'] = $role;
-                    
-                    // Create a session token for added security
-                    $_SESSION['session_token'] = bin2hex(random_bytes(32));
-                    
-                    // Set the last activity time for session timeout handling
-                    $_SESSION['last_activity'] = time();
-
-                    // Redirect to the corresponding dashboard based on the role
-                    if ($role == "event_advisor") {
-                        header("Location: ../Event Advisor/advisor-dashboard.php");
-                    } elseif ($role == "petakom_coordinator") {
-                        header("Location: admin-dashboard.php");
-                    } elseif ($role == "student") {
-                        header("Location: ../Student/student-dashboard.php");
-                    }
-                    exit();
-                } else {
-                    $error = "Incorrect Username or Password.";
-                }
+                exit();
             } else {
                 $error = "Incorrect Username or Password.";
             }
-            $stmt->close();
+        } else {
+            $error = "Incorrect Username or Password.";
         }
+        $stmt->close();
     }
     $conn->close();
 }

@@ -1,8 +1,6 @@
 <?php
 session_start();
 include("includes/dbconnection.php");
-
-
 ?>
 
 <!DOCTYPE html>
@@ -81,56 +79,38 @@ include("includes/dbconnection.php");
                 <tbody>
                     <?php
                     $counter = 1;
-                    
-                    // Get all advisors
-                    $advisor_query = "SELECT advName as name, advPhoneNum as phone, advEmail as email, 'Event Advisor' as role FROM advisor";
-                    $advisor_result = $conn->query($advisor_query);
-                    
-                    if ($advisor_result->num_rows > 0) {
-                        while ($row = $advisor_result->fetch_assoc()) {
+                    // Get all users with their roles
+                    $query = "SELECT u.*, COALESCE(sp.SP_Role, u.U_usertype) as role_type
+                              FROM user u
+                              LEFT JOIN staff s ON u.U_userID = s.U_userID
+                              LEFT JOIN staffposition sp ON s.SP_ID = sp.SP_ID
+                              ORDER BY role_type, u.U_name";
+                    $result = $conn->query($query);
+
+                    if ($result->num_rows > 0) {
+                        while ($row = $result->fetch_assoc()) {
+                            $role_display = '';
+                            $role_class = '';
+                            if ($row['role_type'] == 'admin') {
+                                $role_display = 'Administrator';
+                                $role_class = 'role-admin';
+                            } elseif ($row['role_type'] == 'event_advisor') {
+                                $role_display = 'Event Advisor';
+                                $role_class = 'role-advisor';
+                            } else {
+                                $role_display = 'Student';
+                                $role_class = 'role-student';
+                            }
+
                             echo "<tr>";
                             echo "<td>" . $counter++ . "</td>";
-                            echo "<td>" . htmlspecialchars($row['name']) . "</td>";
-                            echo "<td>" . htmlspecialchars($row['phone']) . "</td>";
-                            echo "<td>" . htmlspecialchars($row['email']) . "</td>";
-                            echo "<td><span class='role-badge role-advisor'>" . $row['role'] . "</span></td>";
+                            echo "<td>" . htmlspecialchars($row['U_name'] ?? 'N/A') . "</td>";
+                            echo "<td>" . htmlspecialchars($row['U_phoneNum'] ?? 'N/A') . "</td>";
+                            echo "<td>" . htmlspecialchars($row['U_email']) . "</td>";
+                            echo "<td><span class='role-badge $role_class'>" . $role_display . "</span></td>";
                             echo "</tr>";
                         }
-                    }
-                    
-                    // Get all students
-                    $student_query = "SELECT stuName as name, stuPhoneNum as phone, stuEmail as email, 'Student' as role FROM student";
-                    $student_result = $conn->query($student_query);
-                    
-                    if ($student_result->num_rows > 0) {
-                        while ($row = $student_result->fetch_assoc()) {
-                            echo "<tr>";
-                            echo "<td>" . $counter++ . "</td>";
-                            echo "<td>" . htmlspecialchars($row['name']) . "</td>";
-                            echo "<td>" . htmlspecialchars($row['phone']) . "</td>";
-                            echo "<td>" . htmlspecialchars($row['email']) . "</td>";
-                            echo "<td><span class='role-badge role-student'>" . $row['role'] . "</span></td>";
-                            echo "</tr>";
-                        }
-                    }
-                    
-                    // Get all admins
-                    $admin_query = "SELECT adminEmail as email, 'Administrator' as role FROM admin";
-                    $admin_result = $conn->query($admin_query);
-                    
-                    if ($admin_result->num_rows > 0) {
-                        while ($row = $admin_result->fetch_assoc()) {
-                            echo "<tr>";
-                            echo "<td>" . $counter++ . "</td>";
-                            echo "<td>N/A</td>";
-                            echo "<td>N/A</td>";
-                            echo "<td>" . htmlspecialchars($row['email']) . "</td>";
-                            echo "<td><span class='role-badge role-admin'>" . $row['role'] . "</span></td>";
-                            echo "</tr>";
-                        }
-                    }
-                    
-                    if ($counter == 1) {
+                    } else {
                         echo "<tr><td colspan='5' class='text-center'>No users found</td></tr>";
                     }
                     ?>

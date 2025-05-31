@@ -13,8 +13,8 @@ $advisor_data = array();
 $error = "";
 $success = "";
 
-// Get current advisor data
-$query = "SELECT advName, advPhoneNum, advEmail FROM advisor WHERE advEmail = ?";
+// Get current advisor data from unified user table
+$query = "SELECT U_userID, U_name, U_phoneNum, U_email FROM user WHERE U_email = ? AND U_usertype = 'event_advisor'";
 $stmt = $conn->prepare($query);
 $stmt->bind_param('s', $email);
 $stmt->execute();
@@ -32,37 +32,25 @@ if (isset($_POST['update'])) {
     $new_name = $_POST['name'];
     $new_phone = $_POST['phone'];
     $new_email = $_POST['email'];
-    
+
     // Check if new email already exists (if email is being changed)
     if ($new_email != $email) {
-        $check_queries = array();
-        $check_queries[] = "SELECT advEmail FROM advisor WHERE advEmail = ?";
-        $check_queries[] = "SELECT stuEmail FROM student WHERE stuEmail = ?";
-        $check_queries[] = "SELECT adminEmail FROM admin WHERE adminEmail = ?";
-        
-        $email_exists = false;
-        foreach ($check_queries as $check_query) {
-            $check_stmt = $conn->prepare($check_query);
-            $check_stmt->bind_param('s', $new_email);
-            $check_stmt->execute();
-            $check_result = $check_stmt->get_result();
-            if ($check_result->num_rows > 0) {
-                $email_exists = true;
-                break;
-            }
-        }
-        
-        if ($email_exists) {
+        $check_query = "SELECT U_userID FROM user WHERE U_email = ? AND U_userID != ?";
+        $check_stmt = $conn->prepare($check_query);
+        $check_stmt->bind_param('si', $new_email, $advisor_data['U_userID']);
+        $check_stmt->execute();
+        $check_result = $check_stmt->get_result();
+        if ($check_result->num_rows > 0) {
             $error = "Email already exists!";
         }
     }
-    
+
     if (!$error) {
-        // Update advisor data
-        $update_query = "UPDATE advisor SET advName = ?, advPhoneNum = ?, advEmail = ? WHERE advEmail = ?";
+        // Update advisor data in user table
+        $update_query = "UPDATE user SET U_name = ?, U_phoneNum = ?, U_email = ? WHERE U_userID = ?";
         $stmt = $conn->prepare($update_query);
-        $stmt->bind_param('ssss', $new_name, $new_phone, $new_email, $email);
-        
+        $stmt->bind_param('sssi', $new_name, $new_phone, $new_email, $advisor_data['U_userID']);
+
         if ($stmt->execute()) {
             // Update session email if changed
             if ($new_email != $email) {
@@ -173,7 +161,7 @@ if (isset($_POST['update'])) {
 <div class="container-main">
     <div class="form-container">
         <div class="avatar">
-            <?php echo strtoupper(substr($advisor_data['advName'], 0, 1)); ?>
+            <?php echo strtoupper(substr($advisor_data['U_name'], 0, 1)); ?>
         </div>
         <h2 class="page-title">Edit My Profile</h2>
         
@@ -193,17 +181,17 @@ if (isset($_POST['update'])) {
         <form method="post" action="">
             <div class="form-group">
                 <label for="name">Full Name</label>
-                <input type="text" class="form-control" id="name" name="name" value="<?php echo htmlspecialchars($advisor_data['advName']); ?>" required>
+                <input type="text" class="form-control" id="name" name="name" value="<?php echo htmlspecialchars($advisor_data['U_name']); ?>" required>
             </div>
             
             <div class="form-group">
                 <label for="phone">Phone Number</label>
-                <input type="text" class="form-control" id="phone" name="phone" value="<?php echo htmlspecialchars($advisor_data['advPhoneNum']); ?>" required>
+                <input type="text" class="form-control" id="phone" name="phone" value="<?php echo htmlspecialchars($advisor_data['U_phoneNum']); ?>" required>
             </div>
             
             <div class="form-group">
                 <label for="email">Email Address</label>
-                <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($advisor_data['advEmail']); ?>" required>
+                <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($advisor_data['U_email']); ?>" required>
             </div>
             
             <div class="form-group text-center">

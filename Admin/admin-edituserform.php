@@ -2,30 +2,23 @@
 session_start();
 include("includes/dbconnection.php");
 
-
-
-if (!isset($_GET['email']) || !isset($_GET['role'])) {
+if (!isset($_GET['id'])) {
     header("Location: admin-edituserlist.php");
     exit();
 }
 
-$email = $_GET['email'];
-$role = $_GET['role'];
+$user_id = $_GET['id'];
 $user_data = array();
 $error = "";
 $success = "";
 
 // Get current user data
-if ($role == 'advisor') {
-    $query = "SELECT advName as name, advPhoneNum as phone, advEmail as email FROM advisor WHERE advEmail = ?";
-} elseif ($role == 'student') {
-    $query = "SELECT stuName as name, stuPhoneNum as phone, stuEmail as email FROM student WHERE stuEmail = ?";
-} elseif ($role == 'admin') {
-    $query = "SELECT adminEmail as email FROM admin WHERE adminEmail = ?";
-}
-
+$query = "SELECT u.*, COALESCE(sp.SP_Role, u.U_usertype) as role_type FROM user u
+          LEFT JOIN staff s ON u.U_userID = s.U_userID
+          LEFT JOIN staffposition sp ON s.SP_ID = sp.SP_ID
+          WHERE u.U_userID = ?";
 $stmt = $conn->prepare($query);
-$stmt->bind_param('s', $email);
+$stmt->bind_param('i', $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -33,7 +26,6 @@ if ($result->num_rows == 0) {
     header("Location: admin-edituserlist.php");
     exit();
 }
-
 $user_data = $result->fetch_assoc();
 
 // Handle form submission
@@ -41,47 +33,24 @@ if (isset($_POST['update'])) {
     $new_name = $_POST['name'] ?? '';
     $new_phone = $_POST['phone'] ?? '';
     $new_email = $_POST['email'];
-    
+
     // Check if new email already exists (if email is being changed)
-    if ($new_email != $email) {
-        $check_queries = array();
-        $check_queries[] = "SELECT advEmail FROM advisor WHERE advEmail = ?";
-        $check_queries[] = "SELECT stuEmail FROM student WHERE stuEmail = ?";
-        $check_queries[] = "SELECT adminEmail FROM admin WHERE adminEmail = ?";
-        
-        $email_exists = false;
-        foreach ($check_queries as $check_query) {
-            $check_stmt = $conn->prepare($check_query);
-            $check_stmt->bind_param('s', $new_email);
-            $check_stmt->execute();
-            $check_result = $check_stmt->get_result();
-            if ($check_result->num_rows > 0) {
-                $email_exists = true;
-                break;
-            }
-        }
-        
-        if ($email_exists) {
+    if ($new_email != $user_data['U_email']) {
+        $check_query = "SELECT U_userID FROM user WHERE U_email = ? AND U_userID != ?";
+        $check_stmt = $conn->prepare($check_query);
+        $check_stmt->bind_param('si', $new_email, $user_id);
+        $check_stmt->execute();
+        $check_result = $check_stmt->get_result();
+        if ($check_result->num_rows > 0) {
             $error = "Email already exists!";
         }
     }
     
     if (!$error) {
         // Update user data
-        if ($role == 'advisor') {
-            $update_query = "UPDATE advisor SET advName = ?, advPhoneNum = ?, advEmail = ? WHERE advEmail = ?";
-            $stmt = $conn->prepare($update_query);
-            $stmt->bind_param('ssss', $new_name, $new_phone, $new_email, $email);
-        } elseif ($role == 'student') {
-            $update_query = "UPDATE student SET stuName = ?, stuPhoneNum = ?, stuEmail = ? WHERE stuEmail = ?";
-            $stmt = $conn->prepare($update_query);
-            $stmt->bind_param('ssss', $new_name, $new_phone, $new_email, $email);
-        } elseif ($role == 'admin') {
-            $update_query = "UPDATE admin SET adminEmail = ? WHERE adminEmail = ?";
-            $stmt = $conn->prepare($update_query);
-            $stmt->bind_param('ss', $new_email, $email);
-        }
-        
+        $update_query = "UPDATE user SET U_name = ?, U_phoneNum = ?, U_email = ? WHERE U_userID = ?";
+        $stmt = $conn->prepare($update_query);
+        $stmt->bind_param('sssi', $new_name, $new_phone, $new_email, $user_id);
         if ($stmt->execute()) {
             $_SESSION['success_message'] = "User updated successfully!";
             header("Location: admin-edituserlist.php");
@@ -158,9 +127,9 @@ if (isset($_POST['update'])) {
         <div class="role-display">
             <strong>Role: </strong>
             <?php 
-            if ($role == 'advisor') echo 'Event Advisor';
-            elseif ($role == 'student') echo 'Student';
-            elseif ($role == 'admin') echo 'Administrator';
+            if ($user_data['role_type'] == 'event_advisor') echo 'Event Advisor';
+            elseif ($user_data['role_type'] == 'student') echo 'Student';
+            elseif ($user_data['role_type'] == 'admin') echo 'Administrator';
             ?>
         </div>
         
@@ -174,15 +143,15 @@ if (isset($_POST['update'])) {
         ?>
         
         <form method="post" action="">
-            <?php if ($role != 'admin'): ?>
+            <?php if ($user_data['role_type'] != 'admin'): ?>
             <div class="form-group">
                 <label for="name">Full Name</label>
-                <input type="text" class="form-control" id="name" name="name" value="<?php echo htmlspecialchars($user_data['name'] ?? ''); ?>" required>
+                <input type="text" class="form-control" id="name" name="name" value="<?php echo htmlspecialchars($user_data['U_name'] ?? ''); ?>" required>
             </div>
             
             <div class="form-group">
                 <label for="phone">Phone Number</label>
-                <input type="text" class="form-control" id="phone" name="phone" value="<?php echo htmlspecialchars($user_data['phone'] ?? ''); ?>" required>
+                <input type="text" class="form-control" id="phone" name="phone" value="<?php echo htmlspecialchars($user_data['U_phoneNum'] ?? ''); ?>" required>
             </div>
             <?php else: ?>
             <input type="hidden" name="name" value="">
@@ -191,7 +160,7 @@ if (isset($_POST['update'])) {
             
             <div class="form-group">
                 <label for="email">Email</label>
-                <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($user_data['email']); ?>" required>
+                <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($user_data['U_email']); ?>" required>
             </div>
             
             <div class="form-group">

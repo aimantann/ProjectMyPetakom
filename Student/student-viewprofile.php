@@ -11,8 +11,8 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'student') {
 $email = $_SESSION['email'];
 $student_data = array();
 
-// Get student data
-$query = "SELECT stuName, stuPhoneNum, stuEmail FROM student WHERE stuEmail = ?";
+// Get student data from unified user table
+$query = "SELECT U_name, U_phoneNum, U_email FROM user WHERE U_email = ? AND U_usertype = 'student'";
 $stmt = $conn->prepare($query);
 $stmt->bind_param('s', $email);
 $stmt->execute();
@@ -137,7 +137,7 @@ if ($result->num_rows > 0) {
     <div class="profile-container">
         <div class="profile-header">
             <div class="avatar">
-                <?php echo strtoupper(substr($student_data['stuName'], 0, 1)); ?>
+                <?php echo strtoupper(substr($student_data['U_name'], 0, 1)); ?>
             </div>
             <h2 class="profile-title">My Profile</h2>
             <span class="role-badge">Student</span>
@@ -146,17 +146,17 @@ if ($result->num_rows > 0) {
         <div class="profile-info">
             <div class="info-row">
                 <div class="info-label">Full Name:</div>
-                <div class="info-value"><?php echo htmlspecialchars($student_data['stuName']); ?></div>
+                <div class="info-value"><?php echo htmlspecialchars($student_data['U_name']); ?></div>
             </div>
             
             <div class="info-row">
                 <div class="info-label">Phone Number:</div>
-                <div class="info-value"><?php echo htmlspecialchars($student_data['stuPhoneNum']); ?></div>
+                <div class="info-value"><?php echo htmlspecialchars($student_data['U_phoneNum']); ?></div>
             </div>
             
             <div class="info-row">
                 <div class="info-label">Email Address:</div>
-                <div class="info-value"><?php echo htmlspecialchars($student_data['stuEmail']); ?></div>
+                <div class="info-value"><?php echo htmlspecialchars($student_data['U_email']); ?></div>
             </div>
             
             <div class="info-row">
