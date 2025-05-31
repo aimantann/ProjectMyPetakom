@@ -1,3 +1,32 @@
+<?php
+// --- ADDED: Fetch name and role for sidebar display ---
+if (!isset($conn)) {
+    include('includes/dbconnection.php');
+}
+$user_name = '';
+$user_role = '';
+if (isset($_SESSION['email'])) {
+    $user_email = $_SESSION['email'];
+    $query = "SELECT U_name, U_usertype FROM user WHERE U_email = ? LIMIT 1";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param('s', $user_email);
+    $stmt->execute();
+    $stmt->bind_result($db_name, $db_role);
+    if ($stmt->fetch()) {
+        $user_name = $db_name;
+        if ($db_role === 'student') {
+            $user_role = 'Student';
+        } else if ($db_role === 'admin') {
+            $user_role = 'Administrator';
+        } else if ($db_role === 'event_advisor') {
+            $user_role = 'Event Advisor';
+        } else {
+            $user_role = ucfirst($db_role);
+        }
+    }
+    $stmt->close();
+}
+?>
 <nav id="sidebar" class="sidebar">
     <!-- Sidebar Header -->
     <div class="sidebar-header">
@@ -13,8 +42,9 @@
             <img src="images/arep.jpg" alt="  User" class="rounded-circle">
         </div>
         <div class="user-info">
-            <h6 class="mb-0">Student</h6>
-            <span class="user-role">Student</span>
+            <!-- CHANGED: Show logged-in user's name and role -->
+            <h6 class="mb-0"><?php echo htmlspecialchars($user_name ?: 'Student'); ?></h6>
+            <span class="user-role"><?php echo htmlspecialchars($user_role ?: 'Student'); ?></span>
         </div>
     </div>
 
@@ -126,6 +156,23 @@
                 </li>
             </ul>
         </li>
+
+
+         <!-- Manage Event Attendance -->
+         <li class="sidebar-item">
+                <a href="#attendanceSubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed">
+                    <i class="fas fa-calendar-check me-2"></i>
+                    <span>Manage Event Attendance</span>
+                    <i class="fas fa-chevron-down ms-auto"></i>
+                </a>
+                <ul class="collapse list-unstyled submenu" id="attendanceSubmenu">
+                    <li>
+                        <a href="../Student/scan_qr.php">
+                            <i class="fas fa-qrcode me-2"></i> Scan QR Code
+                        </a>
+                    </li>
+                 </ul>
+             </li>
 
         <!-- Divider -->
         <li class="sidebar-divider">

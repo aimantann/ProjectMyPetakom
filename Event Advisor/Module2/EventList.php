@@ -1,11 +1,8 @@
 <?php
 session_start();
+require_once '../includes/dbconnection.php';
 
-// Include DB connection
-require_once '../includes/dbconnection.php'; 
-
-
-// Fetch all events (removed advisor-specific filtering)
+// Fetch all events
 $sql = "SELECT * FROM event ORDER BY E_startDate DESC";
 $result = $conn->query($sql);
 ?>
