@@ -1,7 +1,6 @@
 <?php
 session_start();
-
-
+include("includes/dbconnection.php");
 
 // Dummy database connection simulation
 // In real implementation, replace with actual database connection

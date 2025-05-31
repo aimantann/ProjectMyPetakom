@@ -2,28 +2,66 @@
 session_start();
 include("includes/dbconnection.php");
 
-// Fetch claims from database
-$query = "SELECT * FROM meritclaim ORDER BY MC_submitDate DESC";
-$result = mysqli_query($conn, $query);
-
-// Handle success message
-$success_message = '';
-if (isset($_GET['success']) && $_GET['success'] == 1) {
-    $success_message = 'Claim submitted successfully!';
+// Handle approval/rejection
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    $claim_id = intval($_POST['claim_id']);
+    $action = $_POST['action'];
+    $merit_points = isset($_POST['merit_points']) ? intval($_POST['merit_points']) : 0;
+    
+    if ($action === 'approve') {
+        // Update claim status to Approved
+        $update_query = "UPDATE meritclaim SET MC_claimStatus = 'Approved' WHERE MC_claimID = $claim_id";
+        
+        if (mysqli_query($conn, $update_query)) {
+            // Insert into meritawarded table
+            $award_query = "INSERT INTO meritawarded (MC_claimID, MD_totalMerit) VALUES ($claim_id, $merit_points)";
+            
+            if (mysqli_query($conn, $award_query)) {
+                $success_message = "Claim approved successfully and merit points awarded!";
+            } else {
+                $error_message = "Claim approved but failed to award merit points: " . mysqli_error($conn);
+            }
+        } else {
+            $error_message = "Failed to approve claim: " . mysqli_error($conn);
+        }
+    } elseif ($action === 'reject') {
+        // Update claim status to Rejected
+        $update_query = "UPDATE meritclaim SET MC_claimStatus = 'Rejected' WHERE MC_claimID = $claim_id";
+        
+        if (mysqli_query($conn, $update_query)) {
+            $success_message = "Claim rejected successfully!";
+        } else {
+            $error_message = "Failed to reject claim: " . mysqli_error($conn);
+        }
+    }
 }
 
-// Dummy events data for edit modal (replace with actual database query)
+// Fetch all pending claims
+$query = "SELECT mc.*, e.E_eventName 
+          FROM meritclaim mc 
+          LEFT JOIN event e ON mc.E_eventID = e.E_eventID 
+          ORDER BY mc.MC_submitDate DESC";
+$result = mysqli_query($conn, $query);
+
+// Dummy events for display (since we're still using dummy data)
 $dummy_events = [
-    ['id' => 1, 'name' => 'Programming Competition 2024'],
-    ['id' => 2, 'name' => 'Tech Talk: AI in Web Development'],
-    ['id' => 3, 'name' => 'Hackathon 2024'],
-    ['id' => 4, 'name' => 'Web Design Workshop'],
-    ['id' => 5, 'name' => 'Cybersecurity Seminar'],
-    ['id' => 6, 'name' => 'Mobile App Development Course'],
-    ['id' => 7, 'name' => 'Database Management Workshop'],
-    ['id' => 8, 'name' => 'UI/UX Design Competition'],
-    ['id' => 9, 'name' => 'Cloud Computing Seminar'],
-    ['id' => 10, 'name' => 'Data Science Workshop']
+    1 => 'Programming Competition 2024',
+    2 => 'Tech Talk: AI in Web Development',
+    3 => 'Hackathon 2024',
+    4 => 'Web Design Workshop',
+    5 => 'Cybersecurity Seminar',
+    6 => 'Mobile App Development Course',
+    7 => 'Database Management Workshop',
+    8 => 'UI/UX Design Competition',
+    9 => 'Cloud Computing Seminar',
+    10 => 'Data Science Workshop'
+];
+
+// Merit points based on role
+$merit_points_by_role = [
+    'Participant' => 30,
+    'Committee' => 50,
+    'Main Committee' => 70
 ];
 ?>
 
@@ -32,7 +70,7 @@ $dummy_events = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Merit Claims - MyPetakom</title>
+    <title>Manage Merit Claims - Event Advisor</title>
     <style>
         * {
             margin: 0;
@@ -99,29 +137,30 @@ $dummy_events = [
             font-weight: 600;
         }
 
-        .new-claim-btn {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            font-weight: 600;
-            transition: all 0.3s;
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
         }
 
-        .new-claim-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
-            text-decoration: none;
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
         }
 
-        .new-claim-btn i {
-            margin-right: 8px;
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
         }
 
         .claims-container {
@@ -218,10 +257,11 @@ $dummy_events = [
         .action-buttons {
             display: flex;
             gap: 8px;
+            flex-wrap: wrap;
         }
 
-        .btn-edit {
-            background-color: #007bff;
+        .btn-approve {
+            background-color: #28a745;
             color: white;
             border: none;
             padding: 6px 12px;
@@ -231,18 +271,12 @@ $dummy_events = [
             transition: all 0.3s;
         }
 
-        .btn-edit:hover {
-            background-color: #0056b3;
+        .btn-approve:hover {
+            background-color: #218838;
             transform: translateY(-1px);
         }
 
-        .btn-edit:disabled {
-            background-color: #6c757d;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-delete {
+        .btn-reject {
             background-color: #dc3545;
             color: white;
             border: none;
@@ -253,8 +287,24 @@ $dummy_events = [
             transition: all 0.3s;
         }
 
-        .btn-delete:hover {
+        .btn-reject:hover {
             background-color: #c82333;
+            transform: translateY(-1px);
+        }
+
+        .btn-view {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .btn-view:hover {
+            background-color: #0056b3;
             transform: translateY(-1px);
         }
 
@@ -292,6 +342,12 @@ $dummy_events = [
             color: #155724;
         }
 
+        .alert-danger {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
         /* Modal Styles */
         .modal {
             display: none;
@@ -310,7 +366,7 @@ $dummy_events = [
             padding: 0;
             border-radius: 10px;
             width: 90%;
-            max-width: 600px;
+            max-width: 500px;
             max-height: 90vh;
             overflow-y: auto;
         }
@@ -357,10 +413,6 @@ $dummy_events = [
             font-size: 14px;
         }
 
-        .required {
-            color: #dc3545;
-        }
-
         .form-control {
             width: 100%;
             padding: 12px 15px;
@@ -376,43 +428,6 @@ $dummy_events = [
             box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
         }
 
-        .role-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-            margin-top: 8px;
-        }
-
-        .role-option {
-            display: none;
-        }
-
-        .role-option + label {
-            display: block;
-            padding: 12px 15px;
-            border: 2px solid #e1e5e9;
-            border-radius: 8px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 500;
-        }
-
-        .role-option:checked + label {
-            background-color: #007bff;
-            color: white;
-            border-color: #007bff;
-        }
-
-        .role-option + label:hover {
-            border-color: #007bff;
-            background-color: #f8f9fa;
-        }
-
-        .role-option:checked + label:hover {
-            background-color: #0056b3;
-        }
-
         .modal-footer {
             padding: 20px;
             border-top: 1px solid #dee2e6;
@@ -421,7 +436,7 @@ $dummy_events = [
             justify-content: flex-end;
         }
 
-        .btn-save {
+        .btn-confirm {
             background-color: #28a745;
             color: white;
             border: none;
@@ -431,7 +446,7 @@ $dummy_events = [
             font-weight: 600;
         }
 
-        .btn-save:hover {
+        .btn-confirm:hover {
             background-color: #218838;
         }
 
@@ -487,63 +502,89 @@ $dummy_events = [
                 width: 95%;
                 margin: 2% auto;
             }
-
-            .role-options {
-                grid-template-columns: 1fr;
-            }
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
-        <!-- Header with Back Button and Title -->
+        <!-- Header -->
         <div class="header">
             <div class="header-left">
-                <a href="student-dashboard.php" class="back-btn">
+                <a href="advisor-dashboard.php" class="back-btn">
                     <i class="fas fa-arrow-left"></i>
                     Back
                 </a>
-                <h1 class="page-title">My Merit Claims</h1>
+                <h1 class="page-title">Manage Merit Claims</h1>
             </div>
-            <a href="student-claim-merit.php" class="new-claim-btn">
-                <i class="fas fa-plus"></i>
-                New Claim
-            </a>
         </div>
 
-        <!-- Success Message -->
-        <?php if ($success_message): ?>
+        <!-- Success/Error Messages -->
+        <?php if (isset($success_message)): ?>
             <div class="alert alert-success">
                 <i class="fas fa-check-circle"></i>
                 <?php echo $success_message; ?>
             </div>
         <?php endif; ?>
 
+        <?php if (isset($error_message)): ?>
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i>
+                <?php echo $error_message; ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Statistics -->
+        <div class="stats-container">
+            <?php
+            $stats = ['Pending' => 0, 'Approved' => 0, 'Rejected' => 0];
+            mysqli_data_seek($result, 0);
+            while ($row = mysqli_fetch_assoc($result)) {
+                if (isset($stats[$row['MC_claimStatus']])) {
+                    $stats[$row['MC_claimStatus']]++;
+                }
+            }
+            mysqli_data_seek($result, 0);
+            ?>
+            <div class="stat-card">
+                <div class="stat-number"><?php echo $stats['Pending']; ?></div>
+                <div class="stat-label">Pending Claims</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number"><?php echo $stats['Approved']; ?></div>
+                <div class="stat-label">Approved Claims</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number"><?php echo $stats['Rejected']; ?></div>
+                <div class="stat-label">Rejected Claims</div>
+            </div>
+        </div>
+
         <!-- Claims Table -->
         <div class="claims-container">
             <div class="table-header">
-                <h2 class="table-title">Submitted Claims</h2>
+                <h2 class="table-title">Merit Claims Management</h2>
             </div>
 
             <?php if (mysqli_num_rows($result) > 0): ?>
                 <table class="claims-table">
                     <thead>
                         <tr>
-                            <th>Merit Claim ID</th>
+                            <th>Claim ID</th>
                             <th>Event Name</th>
                             <th>Role</th>
                             <th>Status</th>
                             <th>Submit Date</th>
-                            <th>Document Path</th>
+                            <th>Document</th>
+                            <th>Merit Points</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php while($row = mysqli_fetch_assoc($result)): ?>
-                            <tr id="row-<?php echo $row['MC_claimID']; ?>">
+                            <tr>
                                 <td><?php echo $row['MC_claimID']; ?></td>
-                                <td><?php echo 'Event ' . $row['E_eventID']; ?></td>
+                                <td><?php echo isset($dummy_events[$row['E_eventID']]) ? $dummy_events[$row['E_eventID']] : 'Event ' . $row['E_eventID']; ?></td>
                                 <td>
                                     <span class="role-badge <?php 
                                         echo $row['MC_role'] === 'Main Committee' ? 'role-main' : 
@@ -564,22 +605,29 @@ $dummy_events = [
                                 <td>
                                     <?php if($row['MC_documentPath']): ?>
                                         <a href="<?php echo htmlspecialchars($row['MC_documentPath']); ?>" target="_blank" class="document-link">
-                                            <i class="fas fa-file-alt"></i> View Document
+                                            <i class="fas fa-file-alt"></i> View
                                         </a>
                                     <?php else: ?>
                                         <span class="text-muted">No document</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
+                                    <strong><?php echo isset($merit_points_by_role[$row['MC_role']]) ? $merit_points_by_role[$row['MC_role']] : '0'; ?> pts</strong>
+                                </td>
+                                <td>
                                     <div class="action-buttons">
-                                        <button class="btn-edit" 
-                                                onclick="editClaim(<?php echo $row['MC_claimID']; ?>)"
-                                                <?php echo strtolower($row['MC_claimStatus']) !== 'pending' ? 'disabled title="Can only edit pending claims"' : ''; ?>>
-                                            <i class="fas fa-edit"></i> Edit
-                                        </button>
-                                        <button class="btn-delete" onclick="deleteClaim(<?php echo $row['MC_claimID']; ?>)">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </button>
+                                        <?php if (strtolower($row['MC_claimStatus']) === 'pending'): ?>
+                                            <button class="btn-approve" 
+                                                    onclick="approveClaim(<?php echo $row['MC_claimID']; ?>, '<?php echo $row['MC_role']; ?>', <?php echo $merit_points_by_role[$row['MC_role']]; ?>)">
+                                                <i class="fas fa-check"></i> Approve
+                                            </button>
+                                            <button class="btn-reject" 
+                                                    onclick="rejectClaim(<?php echo $row['MC_claimID']; ?>)">
+                                                <i class="fas fa-times"></i> Reject
+                                            </button>
+                                        <?php else: ?>
+                                            <span class="text-muted">No actions available</span>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
@@ -589,176 +637,93 @@ $dummy_events = [
             <?php else: ?>
                 <div class="no-claims">
                     <i class="fas fa-clipboard-list" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i>
-                    <p>No merit claims submitted yet.</p>
-                    <p>Start by <a href="student-claim-merit.php">submitting your first claim</a>!</p>
+                    <p>No merit claims found.</p>
                 </div>
             <?php endif; ?>
         </div>
     </div>
 
-    <!-- Edit Modal -->
-    <div id="editModal" class="modal">
+    <!-- Approval Modal -->
+    <div id="approvalModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="modal-title">Edit Merit Claim</h3>
+                <h3 class="modal-title">Approve Merit Claim</h3>
                 <button class="close" onclick="closeModal()">&times;</button>
             </div>
-            <form id="editForm">
+            <form id="approvalForm" method="POST">
                 <div class="modal-body">
-                    <input type="hidden" id="edit-id" name="id">
+                    <input type="hidden" name="action" value="approve">
+                    <input type="hidden" name="claim_id" id="approve-claim-id">
                     
-                    <!-- Event Selection -->
                     <div class="form-group">
-                        <label for="edit-event" class="form-label">
-                            Select Event <span class="required">*</span>
-                        </label>
-                        <select name="event_id" id="edit-event" class="form-control" required>
-                            <option value="">-- Choose an Event --</option>
-                            <?php foreach ($dummy_events as $event): ?>
-                                <option value="<?php echo $event['id']; ?>">
-                                    <?php echo htmlspecialchars($event['name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <label class="form-label">Role:</label>
+                        <input type="text" id="approve-role" class="form-control" readonly>
                     </div>
                     
-                    <!-- Role Selection -->
                     <div class="form-group">
-                        <label class="form-label">
-                            Your Role in the Event <span class="required">*</span>
-                        </label>
-                        <div class="role-options">
-                            <input type="radio" name="role" id="edit-participant" value="Participant" class="role-option" required>
-                            <label for="edit-participant">
-                                <i class="fas fa-user"></i>
-                                Participant
-                            </label>
-
-                            <input type="radio" name="role" id="edit-committee" value="Committee" class="role-option" required>
-                            <label for="edit-committee">
-                                <i class="fas fa-users"></i>
-                                Committee
-                            </label>
-
-                            <input type="radio" name="role" id="edit-main-committee" value="Main Committee" class="role-option" required>
-                            <label for="edit-main-committee">
-                                <i class="fas fa-crown"></i>
-                                Main Committee
-                            </label>
-                        </div>
+                        <label for="merit_points" class="form-label">Merit Points to Award:</label>
+                        <input type="number" name="merit_points" id="merit_points" class="form-control" min="1" required>
                     </div>
+                    
+                    <p><strong>Are you sure you want to approve this claim?</strong></p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
-                    <button type="submit" class="btn-save">Save Changes</button>
+                    <button type="submit" class="btn-confirm">Approve Claim</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Rejection Modal -->
+    <div id="rejectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Reject Merit Claim</h3>
+                <button class="close" onclick="closeModal()">&times;</button>
+            </div>
+            <form id="rejectionForm" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="reject">
+                    <input type="hidden" name="claim_id" id="reject-claim-id">
+                    
+                    <p><strong>Are you sure you want to reject this claim?</strong></p>
+                    <p class="text-muted">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn-confirm" style="background-color: #dc3545;">Reject Claim</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script>
-        function editClaim(id) {
-            // Fetch claim data
-            fetch(`get-claim.php?id=${id}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    alert(data.error);
-                    return;
-                }
-                
-                // Populate modal with data
-                document.getElementById('edit-id').value = data.MC_claimID;
-                document.getElementById('edit-event').value = data.E_eventID;
-                
-                // Set role radio button
-                const roleRadios = document.querySelectorAll('input[name="role"]');
-                roleRadios.forEach(radio => {
-                    if (radio.value === data.MC_role) {
-                        radio.checked = true;
-                    }
-                });
-                
-                // Show modal
-                document.getElementById('editModal').style.display = 'block';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error fetching claim data');
-            });
+        function approveClaim(claimId, role, meritPoints) {
+            document.getElementById('approve-claim-id').value = claimId;
+            document.getElementById('approve-role').value = role;
+            document.getElementById('merit_points').value = meritPoints;
+            document.getElementById('approvalModal').style.display = 'block';
         }
 
-        function deleteClaim(id) {
-            if (confirm('Are you sure you want to delete this claim? This action cannot be undone.')) {
-                fetch(`delete-claim.php?id=${id}`, { 
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    }
-                })
-                .then(response => response.text())
-                .then(result => {
-                    if (result.trim() === 'success') {
-                        // Remove row from table
-                        document.getElementById(`row-${id}`).remove();
-                        
-                        // Check if table is now empty
-                        const tbody = document.querySelector('.claims-table tbody');
-                        if (tbody && tbody.children.length === 0) {
-                            location.reload(); // Reload to show "no claims" message
-                        }
-                    } else {
-                        alert('Failed to delete claim. Please try again.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error deleting claim');
-                });
-            }
+        function rejectClaim(claimId) {
+            document.getElementById('reject-claim-id').value = claimId;
+            document.getElementById('rejectionModal').style.display = 'block';
         }
 
         function closeModal() {
-            document.getElementById('editModal').style.display = 'none';
+            document.getElementById('approvalModal').style.display = 'none';
+            document.getElementById('rejectionModal').style.display = 'none';
         }
-
-        // Handle edit form submission
-        document.getElementById('editForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            // Debug: Log form data
-            console.log('Form data being sent:');
-            for (let pair of formData.entries()) {
-                console.log(pair[0] + ': ' + pair[1]);
-            }
-            
-            fetch('update-claim.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.text())
-            .then(result => {
-                console.log('Server response:', result); // Debug log
-                if (result.trim() === 'success') {
-                    alert('Claim updated successfully!');
-                    closeModal();
-                    location.reload(); // Reload to show updated data
-                } else {
-                    alert('Failed to update claim: ' + result);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error updating claim: ' + error.message);
-            });
-        });
 
         // Close modal when clicking outside
         window.onclick = function(event) {
-            const modal = document.getElementById('editModal');
-            if (event.target === modal) {
+            const approvalModal = document.getElementById('approvalModal');
+            const rejectionModal = document.getElementById('rejectionModal');
+            if (event.target === approvalModal) {
+                closeModal();
+            }
+            if (event.target === rejectionModal) {
                 closeModal();
             }
         }
