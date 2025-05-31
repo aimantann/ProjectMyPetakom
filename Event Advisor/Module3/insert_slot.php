@@ -11,7 +11,7 @@ $sql = "INSERT INTO attendanceslot (S_SlotID, S_Name, S_Date, S_Time, S_Location
         VALUES ('$S_SlotID', '$S_Name', '$S_Date', '$S_Time', '$S_Location')";
 
 if ($conn->query($sql)) {
-    header("Location: index.php");
+    header("Location: view_attendanceslot.php");
 } else {
     echo "Error: " . $conn->error;
 }

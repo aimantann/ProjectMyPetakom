@@ -146,12 +146,12 @@
         </a>
         <ul class="collapse list-unstyled submenu" id="attendanceSubmenu">
             <li>
-                <a href="Module 3/index.php">
+                <a href="Module3/view_attendanceslot.php">
                     <i class="fas fa-eye me-2"></i> View Attendance Slot
                 </a>
             </li>
             <li>
-                <a href="Module 3/create_slot.php">
+                <a href="Module3/create_slot.php">
                     <i class="fas fa-plus-circle me-2"></i> Create Attendance Slot
                 </a>
             </li>

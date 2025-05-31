@@ -52,7 +52,7 @@ if (isset($_POST['submit'])) {
             $stmt->execute();
 
             // Set success message
-            $_SESSION['success_message'] = "Password reset successfully";
+            //$_SESSION['success_message'] = "Password reset successfully";
 
             // Redirect to login page
             header("Location: user-login.php");

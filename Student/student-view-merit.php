@@ -1,11 +1,7 @@
 <?php
 session_start();
 
-// Check if student is logged in
-if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'student') {
-    header('Location: login.php');
-    exit();
-}
+
 
 // Dummy database connection simulation
 // In real implementation, replace with actual database connection
