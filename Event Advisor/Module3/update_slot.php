@@ -15,7 +15,7 @@ $sql = "UPDATE attendance_slot SET
         WHERE slot_id=$slot_id";
 
 if ($conn->query($sql)) {
-    header("Location: index.php");
+    header("Location: view_attendanceslot.php");
 } else {
     echo "Error: " . $conn->error;
 }

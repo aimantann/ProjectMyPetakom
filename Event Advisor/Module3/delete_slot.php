@@ -8,6 +8,6 @@ if (isset($_GET['id'])) {
     $stmt->execute();
 }
 
-header("Location: index.php");
+header("Location: view_attendanceslot.php");
 exit();
 ?>

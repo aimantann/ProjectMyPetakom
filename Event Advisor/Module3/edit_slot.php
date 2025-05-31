@@ -22,7 +22,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->bind_param("sssss", $name, $date, $time, $location, $id);
     $stmt->execute();
 
-    header("Location: index.php");
+    header("Location: view_attendanceslot.php");
     exit();
 }
 ?>

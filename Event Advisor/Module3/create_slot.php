@@ -13,10 +13,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->execute();
 
     // Redirect with success message
-    header("Location: index.php?success=1");
+    header("Location: view_attendanceslot.php?success=1");
     exit();
 }
-?>
+?> 
 
 <!DOCTYPE html>
 <html>
@@ -50,7 +50,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       <input type="text" name="location" class="form-control" required>
     </div>
     <button type="submit" class="btn btn-success">Create Slot</button>
-    <a href="index.php" class="btn btn-secondary">Cancel</a>
+    <a href="view_attendanceslot.php" class="btn btn-secondary">Cancel</a>
   </form>
 </div>
 </body>
