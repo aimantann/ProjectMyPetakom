@@ -1,20 +1,6 @@
 <?php
 session_start();
-
-
-
-// Database connection
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "mypetakom";
-
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+include("includes/dbconnection.php");
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -473,18 +459,11 @@ $conn->close();
         document.getElementById('claimForm').addEventListener('submit', function(e) {
             const eventId = document.getElementById('event_id').value;
             const role = document.querySelector('input[name="role"]:checked');
-            const reason = document.getElementById('reason').value.trim();
             const file = document.getElementById('participation_letter').files[0];
 
-            if (!eventId || !role || !reason || !file) {
+            if (!eventId || !role || !file) {
                 e.preventDefault();
                 alert('Please fill in all required fields');
-                return false;
-            }
-
-            if (reason.length < 10) {
-                e.preventDefault();
-                alert('Please provide a more detailed reason (at least 10 characters)');
                 return false;
             }
 
