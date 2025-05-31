@@ -1,8 +1,6 @@
 <?php
 session_start();
 
-
-
 // Include DB connection
 require_once '../includes/dbconnection.php'; 
 
@@ -14,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $end_date = $_POST['end_date'];
     $geo_location = trim($_POST['geo_location']);
     $event_status = $_POST['event_status'];
+    $event_level = $_POST['event_level'];
     
     $upload_dir = 'uploads/approval_letters/';
     $approval_letter = '';
@@ -46,11 +45,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     // Insert event into database
     if (empty($_SESSION['message'])) {
-        $sql = "INSERT INTO event (E_name, E_description, E_startDate, E_endDate, E_geoLocation, E_eventStatus, E_approvalLetter) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO event (E_name, E_description, E_startDate, E_endDate, E_geoLocation, E_eventStatus, E_approvalLetter, E_level) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("sssssss", $event_name, $description, $start_date, $end_date, $geo_location, $event_status, $approval_letter);
+        $stmt->bind_param("ssssssss", $event_name, $description, $start_date, $end_date, $geo_location, $event_status, $approval_letter, $event_level);
         
         if ($stmt->execute()) {
             $_SESSION['message'] = "Event registered successfully!";
@@ -164,6 +163,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <option value="Active">Active</option>
                                 <option value="Postponed">Postponed</option>
                                 <option value="Cancelled">Cancelled</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="event_level" class="form-label">
+                                <i class="fas fa-layer-group me-1"></i>Event Level <span class="required">*</span>
+                            </label>
+                            <select class="form-select" id="event_level" name="event_level" required>
+                                <option value="">-- Select Level --</option>
+                                <option value="International">International</option>
+                                <option value="National">National</option>
+                                <option value="State">State</option>
+                                <option value="District">District</option>
+                                <option value="UMPSA">UMPSA</option>
                             </select>
                         </div>
 

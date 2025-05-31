@@ -104,6 +104,28 @@ $event = $result->fetch_assoc();
                             <p><?php echo htmlspecialchars($event['E_geoLocation']); ?></p>
                         </div>
 
+                        <!-- Added Event Level Display -->
+                        <div class="event-detail">
+                            <h5 class="event-detail-label">Event Level</h5>
+                            <p>
+                                <?php 
+                                $level_badge_class = '';
+                                switch($event['E_level']) {
+                                    case 'International': $level_badge_class = 'bg-danger'; break;
+                                    case 'National': $level_badge_class = 'bg-warning text-dark'; break;
+                                    case 'State': $level_badge_class = 'bg-info'; break;
+                                    case 'District': $level_badge_class = 'bg-primary'; break;
+                                    case 'UMPSA': $level_badge_class = 'bg-secondary'; break;
+                                    default: $level_badge_class = 'bg-light text-dark';
+                                }
+                                ?>
+                                <span class="badge <?php echo $level_badge_class; ?>">
+                                    <i class="fas fa-layer-group me-1"></i>
+                                    <?php echo htmlspecialchars($event['E_level']); ?>
+                                </span>
+                            </p>
+                        </div>
+
                         <?php if (!empty($event['E_approvalLetter'])): ?>
                         <div class="event-detail">
                             <h5 class="event-detail-label">Approval Letter</h5>

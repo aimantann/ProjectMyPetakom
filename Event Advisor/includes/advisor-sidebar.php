@@ -120,7 +120,7 @@
                     </a>
                 </li>
                 <li>
-                    <a href="admin-add-activity.php">
+                    <a href="CommitteeEvent.php">
                         <i class="fas fa-plus-circle me-2"></i> Committee Event
                     </a>
                 </li>
