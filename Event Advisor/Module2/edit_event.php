@@ -1,9 +1,6 @@
 <?php
 session_start();
-require_once '../includes/dbconnection.php'; // Uncommented and corrected path
-
-
-
+require_once '../includes/dbconnection.php';
 
 $event_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
@@ -13,9 +10,6 @@ if (!$event_id) {
     header("Location: EventList.php");
     exit();
 }
-
-// Initialize $event variable
-$event = null;
 
 // Fetch event details
 try {
@@ -50,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $event_status = $_POST['event_status'];
     
     $upload_dir = 'uploads/approval_letters/';
-    $approval_letter = $event['E_approvalLetter']; // Keep existing if no new file
+    $approval_letter = $event['E_approvalLetter'];
     
     // Create upload directory if it doesn't exist
     if (!file_exists($upload_dir)) {
@@ -111,8 +105,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $_SESSION['message_type'] = "success";
                 header("Location: EventList.php");
                 exit();
-            } else {
-                throw new Exception($stmt->error);
             }
         } catch (Exception $e) {
             $_SESSION['message'] = "Error updating event: " . $e->getMessage();
