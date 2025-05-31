@@ -2,18 +2,24 @@
 include 'db.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $id = $_POST['slot_id'];
-    $name = $_POST['name'];
-    $date = $_POST['date'];
-    $time = $_POST['time'];
+    $slotName = $_POST['slot_name'];
+    $slotDate = $_POST['slot_date'];
+    $startTime = $_POST['start_time'];
+    $endTime = $_POST['end_time'];
     $location = $_POST['location'];
-
-    $stmt = $conn->prepare("INSERT INTO attendanceslot (S_SlotID, S_Name, S_Date, S_Time, S_Location) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssss", $id, $name, $date, $time, $location);
-    $stmt->execute();
-
-    // Redirect with success message
-    header("Location: view_attendanceslot.php?success=1");
+    $eventId = $_POST['event_id'];
+    
+    // QR code will be generated later, setting it as NULL for now
+    $stmt = $conn->prepare("INSERT INTO attendanceslot 
+            (S_Name, S_Date, S_startTime, S_endTime, S_Location, S_qrCode, E_eventID) 
+            VALUES (?, ?, ?, ?, ?, NULL, ?)");
+    $stmt->bind_param("sssssi", $slotName, $slotDate, $startTime, $endTime, $location, $eventId);
+    
+    if ($stmt->execute()) {
+        header("Location: view_attendanceslot.php?success=1");
+    } else {
+        echo "Error: " . $conn->error;
+    }
     exit();
 }
 ?> 
@@ -31,19 +37,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   <form method="POST" class="mt-4">
     <div class="mb-3">
       <label class="form-label">Event ID</label>
-      <input type="text" name="slot_id" class="form-control" required>
+      <input type="number" name="event_id" class="form-control" required>
     </div>
     <div class="mb-3">
-      <label class="form-label">Event Name</label>
-      <input type="text" name="name" class="form-control" required>
+      <label class="form-label">Slot Name</label>
+      <input type="text" name="slot_name" class="form-control" required>
     </div>
     <div class="mb-3">
-      <label class="form-label">Event Date</label>
-      <input type="date" name="date" class="form-control" required>
+      <label class="form-label">Date</label>
+      <input type="date" name="slot_date" class="form-control" required>
     </div>
     <div class="mb-3">
-      <label class="form-label">Event Time</label>
-      <input type="time" name="time" class="form-control" required>
+      <label class="form-label">Start Time</label>
+      <input type="time" name="start_time" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">End Time</label>
+      <input type="time" name="end_time" class="form-control" required>
     </div>
     <div class="mb-3">
       <label class="form-label">Location</label>

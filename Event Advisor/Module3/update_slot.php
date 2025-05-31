@@ -1,22 +1,38 @@
 <?php
 include 'db.php';
 
-$slot_id = $_POST['slot_id'];
-$event_id = $_POST['event_id'];
-$event_name = $_POST['event_name'];
-$event_date = $_POST['event_date'];
-$event_time = $_POST['event_time'];
-$event_location = $_POST['event_location'];
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $slot_id = $_POST['slot_id'];
+    $slotName = $_POST['slot_name'];
+    $slotDate = $_POST['slot_date'];
+    $startTime = $_POST['start_time'];
+    $endTime = $_POST['end_time'];
+    $location = $_POST['location'];
+    $eventId = $_POST['event_id'];
 
-$sql = "UPDATE attendance_slot SET 
-        event_id='$event_id', event_name='$event_name', 
-        event_date='$event_date', event_time='$event_time', 
-        event_location='$event_location' 
-        WHERE slot_id=$slot_id";
+    // Using prepared statement for security
+    $stmt = $conn->prepare("UPDATE attendanceslot SET 
+            S_Name = ?,
+            S_Date = ?,
+            S_startTime = ?, 
+            S_endTime = ?, 
+            S_Location = ?,
+            E_eventID = ? 
+            WHERE S_slotID = ?");
+    
+    // Bind parameters
+    $stmt->bind_param("sssssii", $slotName, $slotDate, $startTime, $endTime, $location, $eventId, $slot_id);
 
-if ($conn->query($sql)) {
-    header("Location: view_attendanceslot.php");
+    if ($stmt->execute()) {
+        header("Location: view_attendanceslot.php?success=2"); // 2 indicates successful update
+        exit();
+    } else {
+        echo "Error updating record: " . $conn->error;
+    }
+    
+    $stmt->close();
 } else {
-    echo "Error: " . $conn->error;
+    header("Location: view_attendanceslot.php");
+    exit();
 }
 ?>
