@@ -111,22 +111,17 @@ if (isset($_SESSION['email'])) {
             </ul>
         </li>
 
-        <!-- Activity Management -->
+        <!-- Approve Membership Applications -->
         <li class="sidebar-item">
             <a href="#activitySubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed">
                 <i class="fas fa-calendar-alt me-2"></i>
-                <span>Manage Activities</span>
+                <span>Manage Membership Applications</span>
                 <i class="fas fa-chevron-down ms-auto"></i>
             </a>
             <ul class="collapse list-unstyled submenu" id="activitySubmenu">
                 <li>
-                    <a href="admin-view-activities.php">
-                        <i class="fas fa-list-alt me-2"></i> View Activities
-                    </a>
-                </li>
-                <li>
-                    <a href="admin-add-activity.php">
-                        <i class="fas fa-plus-circle me-2"></i> Add Activity
+                    <a href="admin-approvemembership.php">
+                        <i class="fas fa-list-alt me-2"></i> View Membership Applications
                     </a>
                 </li>
             </ul>
@@ -136,15 +131,7 @@ if (isset($_SESSION['email'])) {
         <li class="sidebar-divider">
             <span class="sidebar-heading">Settings</span>
         </li>
-
-        <!-- Settings -->
-        <li class="sidebar-item">
-            <a href="admin-settings.php" class="sidebar-link">
-                <i class="fas fa-cog me-2"></i>
-                <span>Settings</span>
-            </a>
-        </li>
-
+        
         <!-- Logout -->
         <li class="sidebar-item">
             <a href="user-logout.php" class="sidebar-link">
