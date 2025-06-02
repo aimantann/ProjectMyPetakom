@@ -53,7 +53,7 @@ if (isset($_POST['submit'])) {
                 $_SESSION['user_logged_in'] = true; // Mark the user as logged in
                 $_SESSION['email'] = $email; 
                 $_SESSION['role'] = $role_db;
-                $_SESSION['user_id'] = $row['U_userID'];
+                $_SESSION['U_userID'] = $row['U_userID'];
                 
                 // Create a session token for added security
                 $_SESSION['session_token'] = bin2hex(random_bytes(32));
@@ -181,6 +181,7 @@ if (isset($_POST['submit'])) {
                 <div class="form-group">
                     <label for="role">Role</label>
                     <select class="form-control" id="role" name="role" required>
+                        <option value="student">---</option>
                         <option value="petakom_coordinator">Petakom Coordinator (Admin)</option>
                         <option value="event_advisor">Event Advisor</option>
                         <option value="student">Student</option>

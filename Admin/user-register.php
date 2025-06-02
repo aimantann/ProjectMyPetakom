@@ -176,7 +176,6 @@ if (isset($_POST['submit'])) {
                         <option value="">---</option>
                         <option value="event_advisor">Event Advisor</option>
                         <option value="student">Student</option>
-                        <option value="admin">Administrator</option>
                     </select>
                 </div>
 

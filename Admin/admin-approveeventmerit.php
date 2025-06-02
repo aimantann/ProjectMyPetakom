@@ -1,4 +1,7 @@
 <?php
+
+include 'includes/header.php';
+
 // Database connection
 $servername = "localhost";
 $username = "root";
@@ -119,20 +122,6 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
     </style>
 </head>
 <body class="bg-light">
-    <!-- Header -->
-    <div class="header-bg">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h1 class="mb-0"><i class="fas fa-user-shield me-3"></i>Admin Merit Approval Dashboard</h1>
-                    <p class="mb-0 mt-2">Manage and review merit application requests</p>
-                </div>
-                <div class="col-md-4 text-end">
-                    <i class="fas fa-clipboard-check fa-3x opacity-50"></i>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <div class="container my-5">
         <!-- Alert Messages -->
@@ -304,26 +293,6 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
             </div>
         </div>
 
-        <!-- Filter Options -->
-        <div class="card mt-4">
-            <div class="card-body">
-                <h6 class="card-title"><i class="fas fa-filter me-2"></i>Quick Filters</h6>
-                <div class="btn-group" role="group">
-                    <input type="radio" class="btn-check" name="statusFilter" id="all" autocomplete="off" checked>
-                    <label class="btn btn-outline-primary" for="all" onclick="filterTable('all')">All Applications</label>
-
-                    <input type="radio" class="btn-check" name="statusFilter" id="pending" autocomplete="off">
-                    <label class="btn btn-outline-warning" for="pending" onclick="filterTable('pending')">Pending Only</label>
-
-                    <input type="radio" class="btn-check" name="statusFilter" id="approved" autocomplete="off">
-                    <label class="btn btn-outline-success" for="approved" onclick="filterTable('approved')">Approved Only</label>
-
-                    <input type="radio" class="btn-check" name="statusFilter" id="rejected" autocomplete="off">
-                    <label class="btn btn-outline-danger" for="rejected" onclick="filterTable('rejected')">Rejected Only</label>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -374,5 +343,8 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
             });
         });
     </script>
+
+    <?php include 'includes/footer.php' ?>
+
 </body>
 </html>
