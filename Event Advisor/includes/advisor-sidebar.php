@@ -83,11 +83,6 @@
                         <i class="fas fa-plus-circle me-2"></i> Merit Event
                     </a>
                 </li>
-                <li>
-                    <a href="QRevent.php">
-                        <i class="fas fa-list-alt me-2"></i> QRCode Event
-                    </a>
-                </li>
             </ul>
         </li>
 

@@ -120,7 +120,7 @@ $result = $conn->query($sql);
                                             </button>
                                             <a href="QRevent.php?id=<?php echo $event['E_eventID']; ?>" 
                                                     class="btn btn-outline-dark btn-sm flex-fill">
-                                                      <i class="fas fa-qrcode"></i> QR Code
+                                                    <i class="fas fa-qrcode"></i> QR Code
                                             </a>
 
                                         </div>
