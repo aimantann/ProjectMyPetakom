@@ -87,12 +87,12 @@ if (isset($_SESSION['email'])) {
 
                 <!-- Approve Event Merit Applications -->
         <li class="sidebar-item">
-            <a href="#activitySubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed">
+            <a href="#eventmeritSubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed">
                 <i class="fas fa-calendar-alt me-2"></i>
                 <span>Manage Event Merit Applications</span>
                 <i class="fas fa-chevron-down ms-auto"></i>
             </a>
-            <ul class="collapse list-unstyled submenu" id="activitySubmenu">
+            <ul class="collapse list-unstyled submenu" id="eventmeritSubmenu">
                 <li>
                     <a href="admin-approveeventmerit.php">
                         <i class="fas fa-check-circle me-2"></i> Approve Applications
@@ -103,12 +103,12 @@ if (isset($_SESSION['email'])) {
 
         <!-- Approve Membership Applications -->
         <li class="sidebar-item">
-            <a href="#activitySubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed">
-                <i class="fas fa-calendar-alt me-2"></i>
+            <a href="#membershipSubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed">
+                <i class="fas fa-medal me-2"></i>
                 <span>Manage Membership Applications</span>
                 <i class="fas fa-chevron-down ms-auto"></i>
             </a>
-            <ul class="collapse list-unstyled submenu" id="activitySubmenu">
+            <ul class="collapse list-unstyled submenu" id="membershipSubmenu">
                 <li>
                     <a href="admin-approvemembership.php">
                         <i class="fas fa-check-circle me-2"></i> Approve Applications

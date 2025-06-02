@@ -148,6 +148,13 @@ if (isset($_SESSION['email'])) {
                         </a>
                     </li>
                  </ul>
+                 <ul class="collapse list-unstyled submenu" id="attendanceSubmenu">
+                    <li>
+                        <a href="ViewEvent.php">
+                            <i class="fas fa-qrcode me-2"></i> View Event
+                        </a>
+                    </li>
+                 </ul>
              </li>
 
         <!-- Divider -->
