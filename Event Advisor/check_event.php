@@ -1,6 +1,7 @@
 <?php
 session_start();
-require_once '../includes/dbconnection.php';
+include('includes/header.php');
+include('includes/dbconnection.php');
 
 // Check if event ID is provided
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
@@ -151,6 +152,9 @@ $event = $result->fetch_assoc();
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<?php
+include('includes/footer.php');
+?>
 </body>
 </html>
 

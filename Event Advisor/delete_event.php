@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once '../includes/dbconnection.php';
+include('includes/dbconnection.php');
 
 if (isset($_GET['id'])) {
     $eventId = (int)$_GET['id'];

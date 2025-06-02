@@ -1,5 +1,6 @@
 <?php
-require_once '../includes/dbconnection.php';
+include('includes/header.php');
+include('includes/dbconnection.php');
 
 if (!isset($_GET['id'])) {
     die("Missing Event ID");
@@ -53,5 +54,8 @@ $event = $result->fetch_assoc();
         </div>
     </div>
 </div>
+<?php
+include('includes/footer.php');
+?>
 </body>
 </html>
