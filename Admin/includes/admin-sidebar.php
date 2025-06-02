@@ -85,6 +85,22 @@ if (isset($_SESSION['email'])) {
             </ul>
         </li>
 
+                <!-- Approve Event Merit Applications -->
+        <li class="sidebar-item">
+            <a href="#activitySubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed">
+                <i class="fas fa-calendar-alt me-2"></i>
+                <span>Manage Event Merit Applications</span>
+                <i class="fas fa-chevron-down ms-auto"></i>
+            </a>
+            <ul class="collapse list-unstyled submenu" id="activitySubmenu">
+                <li>
+                    <a href="admin-approveeventmerit.php">
+                        <i class="fas fa-check-circle me-2"></i> Approve Applications
+                    </a>
+                </li>
+            </ul>
+        </li>
+
         <!-- Approve Membership Applications -->
         <li class="sidebar-item">
             <a href="#activitySubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed">

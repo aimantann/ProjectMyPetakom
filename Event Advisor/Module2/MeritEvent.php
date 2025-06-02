@@ -1,173 +1,246 @@
 <?php
-session_start();
-include '../includes/dbconnection.php';
+// Database connection
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "mypetakom_db";
 
-// Make sure advisor is logged in and has user_id
-if (!isset($_SESSION['user_id'])) {
-    header("Location: ../login.php");
-    exit;
+try {
+    $pdo = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch(PDOException $e) {
+    die("Connection failed: " . $e->getMessage());
 }
 
-$advisorId = $_SESSION['user_id'];
-
-// Apply for merit
-if (isset($_GET['apply_merit']) && isset($_GET['event_id'])) {
-    $eventId = intval($_GET['event_id']);
-
-    // Verify advisor owns this event
-    $stmt = $conn->prepare("SELECT E_eventID FROM event WHERE E_eventID = ? AND U_userID = ? LIMIT 1");
-    $stmt->bind_param('ii', $eventId, $advisorId);
-    $stmt->execute();
-    $stmt->bind_result($verified_event_id);
-    $stmt->fetch();
-    $stmt->close();
-
-    if (!$verified_event_id) {
-        $message = "You are not authorized to apply merit for this event.";
-    } else {
-        // Insert merit application (or update if exists)
-        $date = date('Y-m-d');
-        $status = 'Pending';
-
-        // Check if advisor already has a merit application for this event
-        $stmt = $conn->prepare("SELECT MA_applicationID FROM meritapplication WHERE E_eventID = ? AND MA_appliedBy = ?");
-        $stmt->bind_param('ii', $eventId, $advisorId);
-        $stmt->execute();
-        $stmt->store_result();
-
-        if ($stmt->num_rows > 0) {
-            // Update existing application
-            $stmt->close();
-            $stmt2 = $conn->prepare("UPDATE meritapplication SET MA_meritAppStatus=? WHERE E_eventID=? AND MA_appliedBy=?");
-            $stmt2->bind_param('sii', $status, $eventId, $advisorId);
-            if ($stmt2->execute()) {
-                $message = "Merit application updated successfully.";
-            } else {
-                $message = "Failed to update merit application.";
-            }
-            $stmt2->close();
+// Handle merit application submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_merit'])) {
+    $eventId = $_POST['event_id'];
+    $appliedBy = $_POST['applied_by']; // This should come from session in real application
+    
+    try {
+        // Check if application already exists
+        $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM meritapplication WHERE E_eventID = ?");
+        $checkStmt->execute([$eventId]);
+        
+        if ($checkStmt->fetchColumn() == 0) {
+            // Insert new merit application
+            $stmt = $pdo->prepare("INSERT INTO meritapplication (MA_meritAppStatus, MA_appliedBy, E_eventID) VALUES (?, ?, ?)");
+            $stmt->execute(['Pending', $appliedBy, $eventId]);
+            $success_message = "Merit Application Sent!";
         } else {
-            // First, create a default merit record if none exists
-            $stmt->close();
-            $meritStmt = $conn->prepare("SELECT MR_meritID FROM merit LIMIT 1");
-            $meritStmt->execute();
-            $meritStmt->bind_result($meritId);
-            $meritStmt->fetch();
-            $meritStmt->close();
-            
-            if (!$meritId) {
-                // Create a default merit record
-                $defaultMeritName = "Event Merit";
-                $defaultMeritDesc = "Merit for event participation";
-                $defaultMeritPoints = 10;
-                
-                $createMeritStmt = $conn->prepare("INSERT INTO merit (MR_description, MR_score) VALUES (?, ?)");
-                $createMeritStmt->bind_param('si', $defaultMeritDesc, $defaultMeritPoints);
-                $createMeritStmt->execute();
-                $meritId = $conn->insert_id;
-                $createMeritStmt->close();
-            }
-            
-            if ($meritId) {
-                // Insert new application with valid MR_meritID
-                $stmt2 = $conn->prepare("INSERT INTO meritapplication (MA_meritAppStatus, MA_appliedBy, E_eventID, U_userID, MR_meritID) VALUES (?, ?, ?, ?, ?)");
-                $stmt2->bind_param('siiii', $status, $advisorId, $eventId, $advisorId, $meritId);
-                if ($stmt2->execute()) {
-                    $message = "Merit application submitted successfully.";
-                } else {
-                    $message = "Failed to submit merit application.";
-                }
-                $stmt2->close();
-            } else {
-                $message = "Failed to create merit record. Please contact administrator.";
-            }
+            $error_message = "Merit application already exists for this event.";
         }
+    } catch(PDOException $e) {
+        $error_message = "Error: " . $e->getMessage();
     }
 }
 
-// Get advisor's events
-$sql = "SELECT E_eventID, E_name, E_startDate, E_endDate FROM event WHERE U_userID = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $advisorId);
+// Fetch events that haven't applied for merit yet
+$query = "SELECT e.* FROM event e 
+          LEFT JOIN meritapplication ma ON e.E_eventID = ma.E_eventID 
+          WHERE ma.E_eventID IS NULL 
+          ORDER BY e.E_startDate DESC";
+$stmt = $pdo->prepare($query);
 $stmt->execute();
-$result = $stmt->get_result();
+$events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Advisor - Apply for Event Merit</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merit Event Application</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .header-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        .btn-apply {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            border: none;
+            color: white;
+            transition: all 0.3s;
+        }
+        .btn-apply:hover {
+            background: linear-gradient(45deg, #218838, #1aa179);
+            transform: scale(1.05);
+        }
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 0.5rem 1rem;
+        }
+    </style>
 </head>
 <body class="bg-light">
-
-<div class="container py-5">
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h4 class="mb-0">My Events – Merit Application</h4>
-            <a href="../advisor-dashboard.php" class="btn btn-light btn-sm">Dashboard</a>
-        </div>
-        <div class="card-body">
-
-            <?php if (isset($message)): ?>
-                <div class="alert alert-info"><?= htmlspecialchars($message) ?></div>
-            <?php endif; ?>
-
-            <table class="table table-bordered table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th>No</th>
-                        <th>Event Name</th>
-                        <th>Date</th>
-                        <th>Merit Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php
-                $i = 1;
-                while ($row = $result->fetch_assoc()):
-                    $eventId = $row['E_eventID'];
-
-                    // Check merit status
-                    $checkStatus = "SELECT MA_meritAppStatus FROM meritapplication WHERE E_eventID = ? AND MA_appliedBy = ?";
-                    $stmtStatus = $conn->prepare($checkStatus);
-                    $stmtStatus->bind_param("ii", $eventId, $advisorId);
-                    $stmtStatus->execute();
-                    $resStatus = $stmtStatus->get_result();
-                    $statusRow = $resStatus->fetch_assoc();
-                    $status = $statusRow ? $statusRow['MA_meritAppStatus'] : 'Not Applied';
-                ?>
-                <tr>
-                    <td><?= $i++ ?></td>
-                    <td><?= htmlspecialchars($row['E_name']) ?></td>
-                    <td><?= htmlspecialchars($row['E_startDate']) ?> to <?= htmlspecialchars($row['E_endDate']) ?></td>
-                    <td>
-                        <span class="badge <?= $status === 'Not Applied' ? 'bg-secondary' : 'bg-success' ?>">
-                            <?= htmlspecialchars($status) ?>
-                        </span>
-                    </td>
-                    <td>
-                        <?php if ($status === 'Not Applied'): ?>
-                            <a href="?apply_merit=1&event_id=<?= $eventId ?>" 
-                               class="btn btn-sm btn-outline-primary"
-                               onclick="return confirm('Apply merit for this event?')">
-                               Apply for Merit
-                            </a>
-                        <?php else: ?>
-                            <span class="text-muted">Already Applied</span>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-                <?php endwhile; ?>
-                </tbody>
-            </table>
-
+    <!-- Header -->
+    <div class="header-bg">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-0"><i class="fas fa-trophy me-3"></i>Merit Event Application</h1>
+                    <p class="mb-0 mt-2">Apply for merit approval for your registered events</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <i class="fas fa-calendar-alt fa-3x opacity-50"></i>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <div class="container my-5">
+        <!-- Alert Messages -->
+        <?php if (isset($success_message)): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i><?php echo $success_message; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
+        <?php if (isset($error_message)): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i><?php echo $error_message; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
+        <!-- Events List -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-list-alt me-2"></i>Events Available for Merit Application</h4>
+            </div>
+            <div class="card-body p-0">
+                <?php if (count($events) > 0): ?>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Event ID</th>
+                                    <th>Event Name</th>
+                                    <th>Description</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Location</th>
+                                    <th>Status</th>
+                                    <th>Level</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($events as $event): ?>
+                                    <tr>
+                                        <td><strong><?php echo htmlspecialchars($event['E_eventID']); ?></strong></td>
+                                        <td><?php echo htmlspecialchars($event['E_name']); ?></td>
+                                        <td>
+                                            <span class="text-muted">
+                                                <?php echo htmlspecialchars(substr($event['E_description'], 0, 50)) . (strlen($event['E_description']) > 50 ? '...' : ''); ?>
+                                            </span>
+                                        </td>
+                                        <td><?php echo date('M d, Y', strtotime($event['E_startDate'])); ?></td>
+                                        <td><?php echo date('M d, Y', strtotime($event['E_endDate'])); ?></td>
+                                        <td><i class="fas fa-map-marker-alt text-primary me-1"></i><?php echo htmlspecialchars($event['E_geoLocation']); ?></td>
+                                        <td>
+                                            <span class="badge bg-info status-badge">
+                                                <?php echo htmlspecialchars($event['E_eventStatus']); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary status-badge">
+                                                <?php echo htmlspecialchars($event['E_level']); ?>
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <form method="POST" style="display: inline;">
+                                                <input type="hidden" name="event_id" value="<?php echo $event['E_eventID']; ?>">
+                                                <input type="hidden" name="applied_by" value="Event Advisor"> <!-- In real app, get from session -->
+                                                <button type="submit" name="apply_merit" class="btn btn-apply btn-sm" 
+                                                        onclick="return confirm('Are you sure you want to apply for merit approval for this event?')">
+                                                    <i class="fas fa-paper-plane me-1"></i>Apply for Merit
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else: ?>
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Events Available</h5>
+                        <p class="text-muted">All registered events have already applied for merit approval or no events are registered yet.</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Statistics Card -->
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-calendar-check fa-2x text-primary mb-2"></i>
+                        <h4><?php echo count($events); ?></h4>
+                        <p class="text-muted mb-0">Events Available</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-hourglass-half fa-2x text-warning mb-2"></i>
+                        <h4>
+                            <?php 
+                            $pendingStmt = $pdo->prepare("SELECT COUNT(*) FROM meritapplication WHERE MA_meritAppStatus = 'Pending'");
+                            $pendingStmt->execute();
+                            echo $pendingStmt->fetchColumn();
+                            ?>
+                        </h4>
+                        <p class="text-muted mb-0">Pending Applications</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                        <h4>
+                            <?php 
+                            $approvedStmt = $pdo->prepare("SELECT COUNT(*) FROM meritapplication WHERE MA_meritAppStatus = 'Approved'");
+                            $approvedStmt->execute();
+                            echo $approvedStmt->fetchColumn();
+                            ?>
+                        </h4>
+                        <p class="text-muted mb-0">Approved Applications</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Auto-hide success alert -->
+    <script>
+        setTimeout(function() {
+            var alert = document.querySelector('.alert-success');
+            if (alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }
+        }, 3000);
+    </script>
 </body>
 </html>
