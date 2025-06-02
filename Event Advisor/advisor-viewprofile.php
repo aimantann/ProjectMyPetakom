@@ -1,5 +1,7 @@
 <?php
 session_start();
+
+include('includes/header.php');
 include("includes/dbconnection.php");
 
 // Check if user is event advisor
@@ -129,20 +131,6 @@ if ($result->num_rows > 0) {
 
 <body class="bg-light">
 
-<div class="header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <img src="images/MyPetakom Logo.png" alt="PETAKOM Logo" class="logo">
-            </div>
-            <div class="col-md-6 text-right">
-                <a href="advisor-dashboard.php" class="btn btn-light">Back to Dashboard</a>
-                <a href="user-logout.php" class="btn btn-danger">Logout</a>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div class="container-main">
     <div class="profile-container">
         <?php
@@ -184,6 +172,10 @@ if ($result->num_rows > 0) {
         </div>
     </div>
 </div>
+
+<?php
+include('includes/footer.php');
+?>
 
 </body>
 </html>

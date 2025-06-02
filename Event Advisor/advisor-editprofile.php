@@ -1,5 +1,7 @@
 <?php
 session_start();
+
+include('includes/header.php');
 include("includes/dbconnection.php");
 
 // Check if user is event advisor
@@ -144,20 +146,6 @@ if (isset($_POST['update'])) {
 
 <body class="bg-light">
 
-<div class="header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <img src="images/MyPetakom Logo.png" alt="PETAKOM Logo" class="logo">
-            </div>
-            <div class="col-md-6 text-right">
-                <a href="advisor-viewprofile.php" class="btn btn-light">Back to Profile</a>
-                <a href="user-logout.php" class="btn btn-danger">Logout</a>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div class="container-main">
     <div class="form-container">
         <div class="avatar">
@@ -204,6 +192,11 @@ if (isset($_POST['update'])) {
         </form>
     </div>
 </div>
+
+
+<?php
+include('includes/footer.php');
+?>
 
 </body>
 </html>

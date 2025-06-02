@@ -58,7 +58,7 @@ if (isset($_SESSION['email'])) {
             <!-- User Profile -->
             <!-- REMOVED: Dropdown menu, replaced with Hello message -->
             <span class="ms-3 fw-bold text-dark h5 mb-0">
-                Welcome back, <?php echo htmlspecialchars($user_name ?: 'Advisor'); ?>
+                Welcome back, <?php echo htmlspecialchars($user_name ?: 'Advisor'); ?> !
             </span>
         </div>
     </div>
