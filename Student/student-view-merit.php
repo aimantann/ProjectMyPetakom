@@ -1,5 +1,6 @@
 <?php
 session_start();
+include('includes/header.php');
 include("includes/dbconnection.php");
 
 // Dummy database connection simulation
@@ -304,5 +305,8 @@ $total_merits = array_sum(array_column($dummy_merits, 'merit_awarded'));
             <?php endif; ?>
         </div>
     </div>
+<?php
+include('includes/footer.php');
+?>
 </body>
 </html>

@@ -1,9 +1,13 @@
 <?php
 session_start();
+include('includes/header.php');
 include("includes/dbconnection.php");
 
-// Fetch claims from database
-$query = "SELECT * FROM meritclaim ORDER BY MC_submitDate DESC";
+// Fetch claims from database with event names using JOIN
+$query = "SELECT mc.*, e.E_name 
+          FROM meritclaim mc 
+          LEFT JOIN event e ON mc.E_eventID = e.E_eventID 
+          ORDER BY MC_submitDate DESC";
 $result = mysqli_query($conn, $query);
 
 // Handle success message
@@ -11,20 +15,6 @@ $success_message = '';
 if (isset($_GET['success']) && $_GET['success'] == 1) {
     $success_message = 'Claim submitted successfully!';
 }
-
-// Dummy events data for edit modal (replace with actual database query)
-$dummy_events = [
-    ['id' => 1, 'name' => 'Programming Competition 2024'],
-    ['id' => 2, 'name' => 'Tech Talk: AI in Web Development'],
-    ['id' => 3, 'name' => 'Hackathon 2024'],
-    ['id' => 4, 'name' => 'Web Design Workshop'],
-    ['id' => 5, 'name' => 'Cybersecurity Seminar'],
-    ['id' => 6, 'name' => 'Mobile App Development Course'],
-    ['id' => 7, 'name' => 'Database Management Workshop'],
-    ['id' => 8, 'name' => 'UI/UX Design Competition'],
-    ['id' => 9, 'name' => 'Cloud Computing Seminar'],
-    ['id' => 10, 'name' => 'Data Science Workshop']
-];
 ?>
 
 <!DOCTYPE html>
@@ -55,7 +45,7 @@ $dummy_events = [
 
         .header {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start; /* Changed from space-between */
             align-items: center;
             margin-bottom: 30px;
             background-color: white;
@@ -284,6 +274,12 @@ $dummy_events = [
             margin-bottom: 20px;
             border-radius: 8px;
             font-weight: 500;
+            opacity: 1;
+            transition: opacity 5s ease-out;
+        }
+
+        .alert.fade-out {
+            opacity: 0;
         }
 
         .alert-success {
@@ -497,24 +493,14 @@ $dummy_events = [
 </head>
 <body>
     <div class="container">
-        <!-- Header with Back Button and Title -->
+        <!-- Header with Title only -->
         <div class="header">
-            <div class="header-left">
-                <a href="student-dashboard.php" class="back-btn">
-                    <i class="fas fa-arrow-left"></i>
-                    Back
-                </a>
-                <h1 class="page-title">My Merit Claims</h1>
-            </div>
-            <a href="student-claim-merit.php" class="new-claim-btn">
-                <i class="fas fa-plus"></i>
-                New Claim
-            </a>
+            <h1 class="page-title">My Merit Claims</h1>
         </div>
 
         <!-- Success Message -->
         <?php if ($success_message): ?>
-            <div class="alert alert-success">
+            <div class="alert alert-success" id="successAlert">
                 <i class="fas fa-check-circle"></i>
                 <?php echo $success_message; ?>
             </div>
@@ -522,15 +508,10 @@ $dummy_events = [
 
         <!-- Claims Table -->
         <div class="claims-container">
-            <div class="table-header">
-                <h2 class="table-title">Submitted Claims</h2>
-            </div>
-
             <?php if (mysqli_num_rows($result) > 0): ?>
                 <table class="claims-table">
                     <thead>
                         <tr>
-                            <th>Merit Claim ID</th>
                             <th>Event Name</th>
                             <th>Role</th>
                             <th>Status</th>
@@ -542,8 +523,7 @@ $dummy_events = [
                     <tbody>
                         <?php while($row = mysqli_fetch_assoc($result)): ?>
                             <tr id="row-<?php echo $row['MC_claimID']; ?>">
-                                <td><?php echo $row['MC_claimID']; ?></td>
-                                <td><?php echo 'Event ' . $row['E_eventID']; ?></td>
+                                <td><?php echo htmlspecialchars($row['E_name'] ?? 'Unknown Event'); ?></td>
                                 <td>
                                     <span class="role-badge <?php 
                                         echo $row['MC_role'] === 'Main Committee' ? 'role-main' : 
@@ -590,7 +570,6 @@ $dummy_events = [
                 <div class="no-claims">
                     <i class="fas fa-clipboard-list" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i>
                     <p>No merit claims submitted yet.</p>
-                    <p>Start by <a href="student-claim-merit.php">submitting your first claim</a>!</p>
                 </div>
             <?php endif; ?>
         </div>
@@ -614,11 +593,16 @@ $dummy_events = [
                         </label>
                         <select name="event_id" id="edit-event" class="form-control" required>
                             <option value="">-- Choose an Event --</option>
-                            <?php foreach ($dummy_events as $event): ?>
-                                <option value="<?php echo $event['id']; ?>">
-                                    <?php echo htmlspecialchars($event['name']); ?>
+                            <?php
+                            // Fetch events from the event table
+                            $events_query = "SELECT E_eventID, E_name FROM event ORDER BY E_name";
+                            $events_result = mysqli_query($conn, $events_query);
+                            while($event = mysqli_fetch_assoc($events_result)): 
+                            ?>
+                                <option value="<?php echo $event['E_eventID']; ?>">
+                                    <?php echo htmlspecialchars($event['E_name']); ?>
                                 </option>
-                            <?php endforeach; ?>
+                            <?php endwhile; ?>
                         </select>
                     </div>
                     
@@ -657,6 +641,17 @@ $dummy_events = [
     </div>
 
     <script>
+        // Add fade out effect for success message
+        const successAlert = document.getElementById('successAlert');
+        if (successAlert) {
+            setTimeout(() => {
+                successAlert.classList.add('fade-out');
+                setTimeout(() => {
+                    successAlert.style.display = 'none';
+                }, 5000); // Wait for fade out animation to complete
+            }, 100);
+        }
+        
         function editClaim(id) {
             // Fetch claim data
             fetch(`get-claim.php?id=${id}`)
@@ -728,19 +723,12 @@ $dummy_events = [
             
             const formData = new FormData(this);
             
-            // Debug: Log form data
-            console.log('Form data being sent:');
-            for (let pair of formData.entries()) {
-                console.log(pair[0] + ': ' + pair[1]);
-            }
-            
             fetch('update-claim.php', {
                 method: 'POST',
                 body: formData
             })
             .then(response => response.text())
             .then(result => {
-                console.log('Server response:', result); // Debug log
                 if (result.trim() === 'success') {
                     alert('Claim updated successfully!');
                     closeModal();
@@ -763,5 +751,8 @@ $dummy_events = [
             }
         }
     </script>
+<?php
+include('includes/footer.php');
+?>
 </body>
 </html>

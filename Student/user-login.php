@@ -53,7 +53,7 @@ if (isset($_POST['submit'])) {
                 $_SESSION['user_logged_in'] = true; // Mark the user as logged in
                 $_SESSION['email'] = $email; 
                 $_SESSION['role'] = $role_db;
-                $_SESSION['U_userID'] = $row['U_userID'];
+                $_SESSION['user_id'] = $row['U_userID'];
                 
                 // Create a session token for added security
                 $_SESSION['session_token'] = bin2hex(random_bytes(32));

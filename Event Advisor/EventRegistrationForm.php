@@ -10,7 +10,7 @@ require_once('includes/header.php');
 if (!isset($_SESSION['user_id'])) {
     $_SESSION['message'] = "Please log in first.";
     $_SESSION['message_type'] = "warning";
-    header("Location: ../login.php");
+    header("Location: user-login.php");
     exit();
 }
 

@@ -1,8 +1,9 @@
 <?php
 session_start();
+include('includes/header.php');
 
 // Check if user is logged in and is a student
-if (!isset($_SESSION['U_userID']) || $_SESSION['role'] !== 'student') {
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
     $_SESSION['login_required'] = "Please login as a student to access this page.";
     header('Location: user-login.php');
     exit();
@@ -49,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $claim_status = 'Pending';
         
         // Get user ID from session
-        $user_id = $_SESSION['U_userID'];
+        $user_id = $_SESSION['user_id'];
         
         // Add error checking for user ID
         if (!$user_id) {
@@ -340,5 +341,8 @@ $conn->close();
             submitBtn.disabled = true;
         });
     </script>
+<?php
+include('includes/footer.php');
+?>
 </body>
 </html>
