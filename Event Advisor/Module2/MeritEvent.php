@@ -2,10 +2,10 @@
 session_start();
 include '../includes/dbconnection.php';
 
-// Ensure advisor is logged in
+// Make sure advisor is logged in and has user_id
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../login.php");
-    exit();
+    exit;
 }
 
 $advisorId = $_SESSION['user_id'];
@@ -14,28 +14,74 @@ $advisorId = $_SESSION['user_id'];
 if (isset($_GET['apply_merit']) && isset($_GET['event_id'])) {
     $eventId = intval($_GET['event_id']);
 
-    // Check if merit already applied
-    $checkSql = "SELECT * FROM meritapplication WHERE E_eventID = ? AND MA_appliedBy = ?";
-    $stmtCheck = $conn->prepare($checkSql);
-    $stmtCheck->bind_param("ii", $eventId, $advisorId);
-    $stmtCheck->execute();
-    $checkResult = $stmtCheck->get_result();
+    // Verify advisor owns this event
+    $stmt = $conn->prepare("SELECT E_eventID FROM event WHERE E_eventID = ? AND U_userID = ? LIMIT 1");
+    $stmt->bind_param('ii', $eventId, $advisorId);
+    $stmt->execute();
+    $stmt->bind_result($verified_event_id);
+    $stmt->fetch();
+    $stmt->close();
 
-    if ($checkResult->num_rows == 0) {
-        // Insert new merit application
-        $insertSql = "INSERT INTO meritapplication (MA_meritAppStatus, MA_approvedBy, MA_appliedBy, E_eventID, U_userID, MR_meritID)
-                      VALUES ('Pending', NULL, ?, ?, NULL, NULL)";
-        $stmtInsert = $conn->prepare($insertSql);
-        $stmtInsert->bind_param("ii", $advisorId, $eventId);
-        $stmtInsert->execute();
-
-        if ($stmtInsert->affected_rows > 0) {
-            $message = "Merit application submitted.";
-        } else {
-            $message = "Failed to apply for merit.";
-        }
+    if (!$verified_event_id) {
+        $message = "You are not authorized to apply merit for this event.";
     } else {
-        $message = "Merit already applied for this event.";
+        // Insert merit application (or update if exists)
+        $date = date('Y-m-d');
+        $status = 'Pending';
+
+        // Check if advisor already has a merit application for this event
+        $stmt = $conn->prepare("SELECT MA_applicationID FROM meritapplication WHERE E_eventID = ? AND MA_appliedBy = ?");
+        $stmt->bind_param('ii', $eventId, $advisorId);
+        $stmt->execute();
+        $stmt->store_result();
+
+        if ($stmt->num_rows > 0) {
+            // Update existing application
+            $stmt->close();
+            $stmt2 = $conn->prepare("UPDATE meritapplication SET MA_meritAppStatus=? WHERE E_eventID=? AND MA_appliedBy=?");
+            $stmt2->bind_param('sii', $status, $eventId, $advisorId);
+            if ($stmt2->execute()) {
+                $message = "Merit application updated successfully.";
+            } else {
+                $message = "Failed to update merit application.";
+            }
+            $stmt2->close();
+        } else {
+            // First, create a default merit record if none exists
+            $stmt->close();
+            $meritStmt = $conn->prepare("SELECT MR_meritID FROM merit LIMIT 1");
+            $meritStmt->execute();
+            $meritStmt->bind_result($meritId);
+            $meritStmt->fetch();
+            $meritStmt->close();
+            
+            if (!$meritId) {
+                // Create a default merit record
+                $defaultMeritName = "Event Merit";
+                $defaultMeritDesc = "Merit for event participation";
+                $defaultMeritPoints = 10;
+                
+                $createMeritStmt = $conn->prepare("INSERT INTO merit (MR_description, MR_score) VALUES (?, ?)");
+                $createMeritStmt->bind_param('si', $defaultMeritDesc, $defaultMeritPoints);
+                $createMeritStmt->execute();
+                $meritId = $conn->insert_id;
+                $createMeritStmt->close();
+            }
+            
+            if ($meritId) {
+                // Insert new application with valid MR_meritID
+                $stmt2 = $conn->prepare("INSERT INTO meritapplication (MA_meritAppStatus, MA_appliedBy, E_eventID, U_userID, MR_meritID) VALUES (?, ?, ?, ?, ?)");
+                $stmt2->bind_param('siiii', $status, $advisorId, $eventId, $advisorId, $meritId);
+                if ($stmt2->execute()) {
+                    $message = "Merit application submitted successfully.";
+                } else {
+                    $message = "Failed to submit merit application.";
+                }
+                $stmt2->close();
+            } else {
+                $message = "Failed to create merit record. Please contact administrator.";
+            }
+        }
     }
 }
 

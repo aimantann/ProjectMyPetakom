@@ -117,6 +117,11 @@ $result = $conn->query($sql);
                                                     class="btn btn-outline-danger btn-sm flex-fill">
                                                 <i class="fas fa-trash-alt"></i> Delete
                                             </button>
+                                            <a href="QRevent.php?id=<?php echo $event['E_eventID']; ?>" 
+                                                    class="btn btn-outline-dark btn-sm flex-fill">
+                                                      <i class="fas fa-qrcode"></i> QR Code
+                                            </a>
+
                                         </div>
                                     </div>
                                 </div>
