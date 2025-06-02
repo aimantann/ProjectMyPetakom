@@ -1,12 +1,19 @@
 <?php
 session_start();
+
+// Check if user is logged in and is a student
+if (!isset($_SESSION['U_userID']) || $_SESSION['role'] !== 'student') {
+    $_SESSION['login_required'] = "Please login as a student to access this page.";
+    header('Location: user-login.php');
+    exit();
+}
+
 include("includes/dbconnection.php");
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $event_id = $_POST['event_id'];
     $role = $_POST['role'];
-
     
     // Handle file upload
     $upload_dir = "uploads/merit_claims/";
@@ -41,36 +48,67 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $submit_date = date('Y-m-d H:i:s');
         $claim_status = 'Pending';
         
-        $sql = "INSERT INTO meritclaim (E_eventID, MC_role, MC_documentPath, MC_submitDate, MC_claimStatus) 
-                VALUES (?, ?, ?, ?, ?)";
+        // Get user ID from session
+        $user_id = $_SESSION['U_userID'];
+        
+        // Add error checking for user ID
+        if (!$user_id) {
+            $error_message = "Session expired. Please login again.";
+            header('Location: user-login.php');
+            exit();
+        }
+        
+        // Update SQL to include user_id
+        $sql = "INSERT INTO meritclaim (E_eventID, MC_role, MC_documentPath, MC_submitDate, MC_claimStatus, U_userID) 
+                VALUES (?, ?, ?, ?, ?, ?)";
         
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("issss", $event_id, $role, $file_path, $submit_date, $claim_status);
+        
+        if ($stmt === false) {
+            die("Error preparing statement: " . $conn->error);
+        }
+        
+        if (!$stmt->bind_param("issssi", $event_id, $role, $file_path, $submit_date, $claim_status, $user_id)) {
+            die("Error binding parameters: " . $stmt->error);
+        }
         
         if ($stmt->execute()) {
             header('Location: student-my-merit-claims.php?success=1');
             exit();
         } else {
-            $error_message = "Error submitting claim: " . $conn->error;
+            $error_message = "Error submitting claim: " . $stmt->error;
         }
         
         $stmt->close();
     }
 }
 
-// Dummy events data (replace with actual database query)
-$dummy_events = [
-    ['id' => 1, 'name' => 'Programming Competition 2024'],
-    ['id' => 2, 'name' => 'Tech Talk: AI in Web Development'],
-    ['id' => 3, 'name' => 'Hackathon 2024'],
-    ['id' => 4, 'name' => 'Web Design Workshop'],
-    ['id' => 5, 'name' => 'Cybersecurity Seminar'],
-    ['id' => 6, 'name' => 'Mobile App Development Course'],
-    ['id' => 7, 'name' => 'Database Management Workshop'],
-    ['id' => 8, 'name' => 'UI/UX Design Competition'],
-    ['id' => 9, 'name' => 'Cloud Computing Seminar'],
-    ['id' => 10, 'name' => 'Data Science Workshop']
-];
+// Get user information for display
+$user_query = "SELECT U_name FROM user WHERE U_userID = ?";
+$stmt = $conn->prepare($user_query);
+$stmt->bind_param("i", $_SESSION['U_userID']);
+$stmt->execute();
+$result = $stmt->get_result();
+$user_data = $result->fetch_assoc();
+$stmt->close();
+
+// Get current date for comparison
+$current_date = date('Y-m-d H:i:s');
+
+// Fetch active events from database
+$events_query = "SELECT E_eventID as id, E_name as name 
+                FROM event 
+                WHERE E_eventStatus = 'Active' 
+                AND E_endDate >= CURDATE()
+                ORDER BY E_startDate ASC";
+$events_result = $conn->query($events_query);
+$events = [];
+
+if ($events_result && $events_result->num_rows > 0) {
+    while($row = $events_result->fetch_assoc()) {
+        $events[] = $row;
+    }
+}
 
 $conn->close();
 ?>
@@ -81,355 +119,186 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claim Merit - MyPetakom</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
+            background-color: #f8f9fa;
+            padding-top: 20px;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 30px;
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .back-btn {
-            background-color: #007bff;
-            color: white;
+        .card {
             border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            margin-right: 20px;
-            transition: background-color 0.3s;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            border-radius: 15px;
         }
 
-        .back-btn:hover {
-            background-color: #0056b3;
-            text-decoration: none;
-            color: white;
+        .card-header {
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
+            border-radius: 15px 15px 0 0 !important;
         }
 
-        .back-btn i {
-            margin-right: 5px;
+        .btn-primary {
+            background-color: #0d6efd;
+            border: none;
+            padding: 8px 20px;
         }
 
-        .page-title {
-            font-size: 28px;
-            color: #333;
-            font-weight: 600;
+        .btn-primary:hover {
+            background-color: #0b5ed7;
         }
 
-        .form-container {
-            background-color: white;
-            padding: 30px;
+        .role-options label {
+            border: 2px solid #dee2e6;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .form-group {
-            margin-bottom: 25px;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #333;
-            font-size: 14px;
-        }
-
-        .required {
-            color: #dc3545;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e1e5e9;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: #007bff;
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-        }
-
-        select.form-control {
+            padding: 15px;
+            text-align: center;
             cursor: pointer;
+            transition: all 0.3s;
         }
 
-        textarea.form-control {
-            resize: vertical;
-            min-height: 100px;
+        .role-options input[type="radio"]:checked + label {
+            background-color: #0d6efd;
+            color: white;
+            border-color: #0d6efd;
         }
 
         .file-upload {
-            position: relative;
-            display: inline-block;
-            width: 100%;
-        }
-
-        .file-upload input[type="file"] {
-            position: absolute;
-            left: -9999px;
-        }
-
-        .file-upload-label {
-            display: block;
-            padding: 12px 15px;
-            border: 2px dashed #007bff;
-            border-radius: 8px;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
+        }
+
+        .file-upload:hover {
+            border-color: #0d6efd;
             background-color: #f8f9fa;
         }
 
-        .file-upload-label:hover {
-            background-color: #e9ecef;
-            border-color: #0056b3;
-        }
-
-        .file-upload-label i {
-            margin-right: 8px;
-            color: #007bff;
-        }
-
-        .file-info {
-            margin-top: 10px;
-            padding: 8px 12px;
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            border-radius: 5px;
-            font-size: 14px;
-            color: #155724;
-        }
-
-        .btn-submit {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            width: 100%;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
-        }
-
-        .btn-submit:active {
-            transform: translateY(0);
-        }
-
-        .alert {
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            font-weight: 500;
-        }
-
-        .alert-danger {
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-        }
-
-        .help-text {
-            font-size: 12px;
-            color: #6c757d;
-            margin-top: 5px;
-        }
-
-        .role-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-            margin-top: 8px;
-        }
-
-        .role-option {
-            display: none;
-        }
-
-        .role-option + label {
-            display: block;
-            padding: 12px 15px;
-            border: 2px solid #e1e5e9;
-            border-radius: 8px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 500;
-        }
-
-        .role-option:checked + label {
-            background-color: #007bff;
-            color: white;
-            border-color: #007bff;
-        }
-
-        .role-option + label:hover {
-            border-color: #007bff;
-            background-color: #f8f9fa;
-        }
-
-        .role-option:checked + label:hover {
-            background-color: #0056b3;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .back-btn {
-                margin-right: 0;
-                margin-bottom: 15px;
-            }
-
-            .form-container {
-                padding: 20px;
-            }
-
-            .role-options {
-                grid-template-columns: 1fr;
-            }
+        .required {
+            color: red;
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
-        <!-- Header with Back Button and Title -->
-        <div class="header">
-            <a href="student-dashboard.php" class="back-btn">
-                <i class="fas fa-arrow-left"></i>
-                Back
-            </a>
-            <h1 class="page-title">Claim Merit</h1>
-        </div>
-
-        <!-- Claim Form -->
-        <div class="form-container">
-            <?php if (isset($error_message)): ?>
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <?php echo $error_message; ?>
-                </div>
-            <?php endif; ?>
-
-            <form method="POST" enctype="multipart/form-data" id="claimForm">
-                <!-- Event Selection -->
-                <div class="form-group">
-                    <label for="event_id" class="form-label">
-                        Select Event <span class="required">*</span>
-                    </label>
-                    <select name="event_id" id="event_id" class="form-control" required>
-                        <option value="">-- Choose an Event --</option>
-                        <?php foreach ($dummy_events as $event): ?>
-                            <option value="<?php echo $event['id']; ?>">
-                                <?php echo htmlspecialchars($event['name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <!-- Role Selection -->
-                <div class="form-group">
-                    <label class="form-label">
-                        Your Role in the Event <span class="required">*</span>
-                    </label>
-                    <div class="role-options">
-                        <input type="radio" name="role" id="participant" value="Participant" class="role-option" required>
-                        <label for="participant">
-                            <i class="fas fa-user"></i>
-                            Participant
-                        </label>
-
-                        <input type="radio" name="role" id="committee" value="Committee" class="role-option" required>
-                        <label for="committee">
-                            <i class="fas fa-users"></i>
-                            Committee
-                        </label>
-
-                        <input type="radio" name="role" id="main_committee" value="Main Committee" class="role-option" required>
-                        <label for="main_committee">
-                            <i class="fas fa-crown"></i>
-                            Main Committee
-                        </label>
+        <div class="card mb-4">
+            <div class="card-header p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <a href="student-dashboard.php" class="btn btn-primary me-3">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </a>
+                        <h4 class="mb-0">Claim Merit</h4>
+                    </div>
+                    <div class="text-end">
+                        <p class="mb-0 fw-bold"><?php echo htmlspecialchars($user_data['U_name'] ?? 'User'); ?></p>
+                        <small class="text-muted">User ID: <?php echo htmlspecialchars($_SESSION['U_userID']); ?></small>
                     </div>
                 </div>
+            </div>
+            <div class="card-body p-4">
+                <?php if (isset($error_message)): ?>
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <?php echo $error_message; ?>
+                    </div>
+                <?php endif; ?>
 
-
-
-                <!-- File Upload -->
-                <div class="form-group">
-                    <label class="form-label">
-                        Official Participation Letter <span class="required">*</span>
-                    </label>
-                    <div class="file-upload">
-                        <input type="file" name="participation_letter" id="participation_letter" 
-                               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
-                        <label for="participation_letter" class="file-upload-label">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            Click to upload or drag and drop
+                <form method="POST" enctype="multipart/form-data" id="claimForm">
+                    <!-- Event Selection -->
+                    <div class="mb-4">
+                        <label for="event_id" class="form-label fw-bold">
+                            Select Event <span class="required">*</span>
                         </label>
+                        <select name="event_id" id="event_id" class="form-select" required>
+                            <option value="">-- Choose an Event --</option>
+                            <?php if (!empty($events)): ?>
+                                <?php foreach ($events as $event): ?>
+                                    <option value="<?php echo $event['id']; ?>">
+                                        <?php echo htmlspecialchars($event['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <option value="" disabled>No active events available</option>
+                            <?php endif; ?>
+                        </select>
+                        <?php if (empty($events)): ?>
+                            <div class="form-text text-danger">
+                                <i class="fas fa-info-circle"></i> 
+                                There are currently no active events available for merit claims.
+                            </div>
+                        <?php endif; ?>
                     </div>
-                    <div class="help-text">
-                        Accepted formats: PDF, DOC, DOCX, JPG, JPEG, PNG (Max size: 5MB)
-                    </div>
-                    <div id="file-info" class="file-info" style="display: none;"></div>
-                </div>
 
-                <!-- Submit Button -->
-                <div class="form-group">
-                    <button type="submit" class="btn-submit">
-                        <i class="fas fa-paper-plane"></i>
-                        Submit Claim for Approval
-                    </button>
-                </div>
-            </form>
+                    <!-- Role Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            Your Role in the Event <span class="required">*</span>
+                        </label>
+                        <div class="role-options row g-3">
+                            <div class="col-md-4">
+                                <input type="radio" class="btn-check" name="role" id="participant" 
+                                       value="Participant" required>
+                                <label class="btn w-100 h-100" for="participant">
+                                    <i class="fas fa-user mb-2"></i>
+                                    <div>Participant</div>
+                                </label>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="radio" class="btn-check" name="role" id="committee" 
+                                       value="Committee" required>
+                                <label class="btn w-100 h-100" for="committee">
+                                    <i class="fas fa-users mb-2"></i>
+                                    <div>Committee</div>
+                                </label>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="radio" class="btn-check" name="role" id="main_committee" 
+                                       value="Main Committee" required>
+                                <label class="btn w-100 h-100" for="main_committee">
+                                    <i class="fas fa-crown mb-2"></i>
+                                    <div>Main Committee</div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            Official Participation Letter <span class="required">*</span>
+                        </label>
+                        <div class="file-upload">
+                            <input type="file" class="form-control" name="participation_letter" 
+                                   id="participation_letter" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
+                        </div>
+                        <div class="form-text">
+                            Accepted formats: PDF, DOC, DOCX, JPG, JPEG, PNG (Max size: 5MB)
+                        </div>
+                        <div id="file-info" class="alert alert-success mt-2" style="display: none;"></div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-paper-plane me-2"></i>
+                            Submit Claim for Approval
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    
     <script>
         // File upload handler
         document.getElementById('participation_letter').addEventListener('change', function(e) {
@@ -439,12 +308,11 @@ $conn->close();
             if (file) {
                 const fileSize = (file.size / 1024 / 1024).toFixed(2);
                 fileInfo.innerHTML = `
-                    <i class="fas fa-file"></i>
+                    <i class="fas fa-file me-2"></i>
                     Selected: ${file.name} (${fileSize} MB)
                 `;
                 fileInfo.style.display = 'block';
                 
-                // Check file size (5MB limit)
                 if (file.size > 5 * 1024 * 1024) {
                     alert('File size must be less than 5MB');
                     e.target.value = '';
@@ -467,9 +335,8 @@ $conn->close();
                 return false;
             }
 
-            // Show loading state
-            const submitBtn = document.querySelector('.btn-submit');
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Submitting...';
             submitBtn.disabled = true;
         });
     </script>
