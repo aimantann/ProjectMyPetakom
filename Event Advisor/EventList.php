@@ -1,6 +1,7 @@
 <?php
 session_start();
-require_once '../includes/dbconnection.php';
+require_once 'includes/dbconnection.php';
+include('includes/header.php');
 
 // Fetch all events
 $sql = "SELECT * FROM event ORDER BY E_startDate DESC";
@@ -41,7 +42,7 @@ $result = $conn->query($sql);
                 <?php if(isset($_SESSION['username'])): ?>
                     <span class="navbar-text me-3">Welcome, <?php echo htmlspecialchars($_SESSION['username']); ?></span>
                 <?php endif; ?>
-                <a href="../advisor-dashboard.php" class="btn btn-outline-light btn-sm">Dashboard</a>
+               
             </div>
         </div>
     </nav>
@@ -117,6 +118,11 @@ $result = $conn->query($sql);
                                                     class="btn btn-outline-danger btn-sm flex-fill">
                                                 <i class="fas fa-trash-alt"></i> Delete
                                             </button>
+                                            <a href="QRevent.php?id=<?php echo $event['E_eventID']; ?>" 
+                                                    class="btn btn-outline-dark btn-sm flex-fill">
+                                                      <i class="fas fa-qrcode"></i> QR Code
+                                            </a>
+
                                         </div>
                                     </div>
                                 </div>
@@ -178,6 +184,11 @@ $result = $conn->query($sql);
         }
     });
 </script>
+
+<?php
+include('includes/footer.php');
+?>
+
 </body>
 </html>
 

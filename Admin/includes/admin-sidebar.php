@@ -85,27 +85,17 @@ if (isset($_SESSION['email'])) {
             </ul>
         </li>
 
-        <!-- Membership Management -->
+                <!-- Approve Event Merit Applications -->
         <li class="sidebar-item">
-            <a href="#membershipSubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed">
-                <i class="fas fa-users me-2"></i>
-                <span>Manage Membership</span>
+            <a href="#activitySubmenu" data-bs-toggle="collapse" class="sidebar-link collapsed">
+                <i class="fas fa-calendar-alt me-2"></i>
+                <span>Manage Event Merit Applications</span>
                 <i class="fas fa-chevron-down ms-auto"></i>
             </a>
-            <ul class="collapse list-unstyled submenu" id="membershipSubmenu">
+            <ul class="collapse list-unstyled submenu" id="activitySubmenu">
                 <li>
-                    <a href="admin-view-members.php">
-                        <i class="fas fa-list me-2"></i> View Members
-                    </a>
-                </li>
-                <li>
-                    <a href="admin-add-member.php">
-                        <i class="fas fa-user-plus me-2"></i> Add Member
-                    </a>
-                </li>
-                <li>
-                    <a href="admin-approve-membership.php">
-                        <i class="fas fa-check-circle me-2"></i> Approve Requests
+                    <a href="admin-approveeventmerit.php">
+                        <i class="fas fa-check-circle me-2"></i> Approve Applications
                     </a>
                 </li>
             </ul>
@@ -121,7 +111,7 @@ if (isset($_SESSION['email'])) {
             <ul class="collapse list-unstyled submenu" id="activitySubmenu">
                 <li>
                     <a href="admin-approvemembership.php">
-                        <i class="fas fa-list-alt me-2"></i> View Membership Applications
+                        <i class="fas fa-check-circle me-2"></i> Approve Applications
                     </a>
                 </li>
             </ul>

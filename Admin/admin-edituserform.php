@@ -1,5 +1,7 @@
 <?php
 session_start();
+
+include('includes/header.php');
 include("includes/dbconnection.php");
 
 if (!isset($_GET['id'])) {
@@ -173,6 +175,10 @@ if (isset($_POST['update'])) {
         </form>
     </div>
 </div>
+
+<?php
+include('includes/footer.php');
+?>
 
 </body>
 </html>

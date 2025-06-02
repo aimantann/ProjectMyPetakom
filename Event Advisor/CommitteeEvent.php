@@ -1,9 +1,7 @@
 <?php
 // DB connection
-$conn = new mysqli("localhost", "root", "", "mypetakom_db");
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
+include('includes/header.php');
+include('includes/dbconnection.php');
 
 // Fetch registered events
 $eventQuery = "SELECT E_eventID, E_name, E_startDate FROM event";
@@ -52,7 +50,7 @@ $studentResult = $conn->query($studentQuery);
                     
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
              <h4 class="mb-0">Assign Committee Member</h4>
-            <a href="../advisor-dashboard.php" class="btn btn-light btn-sm">Dashboard</a>
+            
         </div>
                     <div class="card-body">
                         <!-- 1. Select Event -->
@@ -132,5 +130,8 @@ $studentResult = $conn->query($studentQuery);
         });
     });
 </script>
+<?php
+include('includes/footer.php');
+?>
 </body>
 </html>

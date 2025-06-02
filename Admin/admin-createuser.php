@@ -1,6 +1,7 @@
 <?php
 session_start();
-include("includes/dbconnection.php");
+include('includes/header.php');
+include('includes/dbconnection.php');
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -181,21 +182,6 @@ if ($positions_result->num_rows > 0) {
 
 <body class="bg-light">
 
-<div class="header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <img src="images/MyPetakom Logo.png" alt="PETAKOM Logo" class="logo">
-            </div>
-            <div class="col-md-6 text-right">
-                <a href="admin-edituserlist.php" class="btn btn-secondary">Back to User List</a>
-                <a href="admin-dashboard.php" class="btn btn-secondary">Dashboard</a>
-                <a href="user-logout.php" class="btn btn-danger">Logout</a>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div class="container-main">
     <div class="form-container">
         <h2 class="page-title">Create New User</h2>
@@ -299,6 +285,10 @@ document.getElementById('password').addEventListener('input', function() {
     }
 });
 </script>
+
+<?php
+include('includes/footer.php');
+?>
 
 </body>
 </html>

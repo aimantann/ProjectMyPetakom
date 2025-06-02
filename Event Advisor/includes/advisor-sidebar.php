@@ -64,27 +64,27 @@
             </a>
             <ul class="collapse list-unstyled submenu" id="eventSubmenu">
                 <li>
-                    <a href="Module2/EventList.php">
+                    <a href="EventList.php">
                         <i class="fas fa-list-alt me-2"></i> List Event
                     </a>
                 </li>
                 <li>
-                    <a href="Module2/EventRegistrationForm.php">
+                    <a href="EventRegistrationForm.php">
                         <i class="fas fa-plus-circle me-2"></i> Register Event
                     </a>
                 </li>
                 <li>
-                    <a href="Module2/CommitteeEvent.php">
+                    <a href="CommitteeEvent.php">
                         <i class="fas fa-plus-circle me-2"></i> Committee Event
                     </a>
                 </li>
                 <li>
-                    <a href="Module2/MeritEvent.php">
+                    <a href="MeritEvent.php">
                         <i class="fas fa-plus-circle me-2"></i> Merit Event
                     </a>
                 </li>
                 <li>
-                    <a href="Module2/QRevent.php">
+                    <a href="QRevent.php">
                         <i class="fas fa-list-alt me-2"></i> QRCode Event
                     </a>
                 </li>

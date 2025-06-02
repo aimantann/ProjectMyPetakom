@@ -1,6 +1,6 @@
 <?php
 session_start();
-include('includes/header.php'); // Adjust path as needed
+include('includes/header.php');
 include('includes/dbconnection.php');
 
 // Fetch all pending membership applications with user info

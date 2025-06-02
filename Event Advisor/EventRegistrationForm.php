@@ -1,8 +1,10 @@
 <?php
+ob_start(); // Add output buffering at the very start
 session_start();
 
 // Include DB connection
-require_once '../includes/dbconnection.php'; 
+require_once('includes/dbconnection.php');
+require_once('includes/header.php');
 
 // Ensure user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -11,6 +13,9 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: ../login.php");
     exit();
 }
+
+// Store success flag
+$submission_success = false;
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -63,6 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($stmt->execute()) {
             $_SESSION['message'] = "Event registered successfully!";
             $_SESSION['message_type'] = "success";
+            $submission_success = true;
+            ob_end_clean(); // Clear output buffer
             header("Location: EventList.php");
             exit();
         } else {
@@ -202,9 +209,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         </div>
 
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="../advisor-dashboard.php" class="btn btn-secondary me-md-2">
-                                <i class="fas fa-times me-1"></i>Cancel
-                            </a>
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save me-1"></i>Register Event
                             </button>
@@ -247,6 +251,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         document.getElementById('start_date').addEventListener('change', function() {
             document.getElementById('end_date').min = this.value;
         });
+
+        <?php if ($submission_success): ?>
+        // Redirect after successful submission
+        window.location.href = 'EventList.php';
+        <?php endif; ?>
     </script>
+<?php
+include('includes/footer.php');
+ob_end_flush(); // End output buffering
+?>
 </body>
 </html>
