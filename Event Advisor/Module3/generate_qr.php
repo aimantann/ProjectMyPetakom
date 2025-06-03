@@ -46,23 +46,22 @@ if (!file_exists($qrDir)) {
     }
 }
 
-// 6. Prepare QR content
-$qrContent = "ATTENDANCE SLOT\n";
-$qrContent .= "Event: " . htmlspecialchars($slot['E_name']) . "\n";
-$qrContent .= "Slot: " . htmlspecialchars($slot['S_Name']) . "\n";
-$qrContent .= "Date: " . date('d/m/Y', strtotime($slot['S_Date'])) . "\n";
-$qrContent .= "Time: " . date('h:i A', strtotime($slot['S_startTime'])) . " - " . 
-               date('h:i A', strtotime($slot['S_endTime'])) . "\n";
-$qrContent .= "Location: " . htmlspecialchars($slot['S_Location']) . "\n";
-$qrContent .= "ID: " . $slot_id . "\n";
-$qrContent .= "Verification: " . substr(md5($slot_id . $slot['E_eventID'] . $slot['S_Date']), 0, 8);
+// 6. Prepare QR content with direct URL
+// Updated path to point to the Student folder
+$validationUrl = "http://localhost/ProjectMyPetakom/Student/Module3/validate_attendance.php?slot=" . $slot_id;
+
+// URL encode the spaces in the path
+$validationUrl = str_replace(" ", "%20", $validationUrl);
+
+// For debugging - save the URL to verify it
+file_put_contents($qrDir . '/debug_url.txt', $validationUrl);
 
 // 7. Generate QR code
 $qrFile = $qrDir . '/slot_' . $slot_id . '.png';
 
 try {
     // Generate QR code with error correction
-    QRcode::png($qrContent, $qrFile, QR_ECLEVEL_H, 8, 2);
+    QRcode::png($validationUrl, $qrFile, QR_ECLEVEL_H, 8, 2);
     
     // Verify QR was created
     if (!file_exists($qrFile)) {

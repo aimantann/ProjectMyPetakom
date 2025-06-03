@@ -27,7 +27,6 @@ error_log("[$currentDateTime] User $currentUser accessed view_attendanceslot.php
             font-size: 0.8rem;
             color: #6c757d;
         }
-        /* Modal styles for QR code display */
         .qr-modal-image {
             max-width: 300px;
             height: auto;
@@ -43,6 +42,12 @@ error_log("[$currentDateTime] User $currentUser accessed view_attendanceslot.php
             padding: 10px;
             background: #f8f9fa;
             border-radius: 4px;
+        }
+        .qr-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
         }
     </style>
 </head>
@@ -82,18 +87,10 @@ error_log("[$currentDateTime] User $currentUser accessed view_attendanceslot.php
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <?php 
             switch ($_GET['success']) {
-                case 1:
-                    echo "Attendance slot created successfully!";
-                    break;
-                case 2:
-                    echo "Attendance slot updated successfully!";
-                    break;
-                case 3:
-                    echo "Attendance slot deleted successfully!";
-                    break;
-                case 4:
-                    echo "QR code generated successfully!";
-                    break;
+                case 1: echo "Attendance slot created successfully!"; break;
+                case 2: echo "Attendance slot updated successfully!"; break;
+                case 3: echo "Attendance slot deleted successfully!"; break;
+                case 4: echo "QR code generated successfully!"; break;
             }
             ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -101,7 +98,6 @@ error_log("[$currentDateTime] User $currentUser accessed view_attendanceslot.php
     <?php endif; ?>
 
     <?php
-    // Fetch attendance slots and event names, order by latest slot
     $query = "SELECT attendanceslot.*, event.E_name 
               FROM attendanceslot 
               JOIN event ON attendanceslot.E_eventID = event.E_eventID 
@@ -130,12 +126,9 @@ error_log("[$currentDateTime] User $currentUser accessed view_attendanceslot.php
                                     <strong>Time:</strong> {$startTime} - {$endTime}<br>
                                     <strong>QR Code Status:</strong> ";
                                     
-            // Check QR Status from S_qrStatus field
-            if ($row['S_qrStatus'] === 'Generated') {
-                echo '<span class="badge bg-success">Generated</span>';
-            } else {
-                echo '<span class="badge bg-warning text-dark">Not Generated</span>';
-            }
+            echo ($row['S_qrStatus'] === 'Generated') 
+                ? '<span class="badge bg-success">Generated</span>' 
+                : '<span class="badge bg-warning text-dark">Not Generated</span>';
             
             echo "          </p>
                             </div>
@@ -150,11 +143,10 @@ error_log("[$currentDateTime] User $currentUser accessed view_attendanceslot.php
                                         <i class='bi bi-trash'></i> Delete
                                     </a>";
                                     
-            // Show different buttons based on QR status
             if ($row['S_qrStatus'] === 'Generated') {
                 echo "<button type='button' 
                              class='btn btn-info btn-sm' 
-                             onclick='showQRCode(\"{$qrPath}\", \"{$row['E_name']}\", \"$slotDate\", \"$startTime\", \"$endTime\", \"$slotLocation\")'>
+                             onclick='showQRCode(\"{$qrPath}\", \"{$row['E_name']}\", \"$slotDate\", \"$startTime\", \"$endTime\", \"$slotLocation\", \"{$row['S_slotID']}\")'>
                         <i class='bi bi-qr-code'></i> View QR
                       </button>";
             } else {
@@ -178,7 +170,6 @@ error_log("[$currentDateTime] User $currentUser accessed view_attendanceslot.php
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-hide alerts after 5 seconds
     setTimeout(function() {
         const alerts = document.getElementsByClassName('alert');
         for(let alert of alerts) {
@@ -187,8 +178,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 5000);
 });
 
-// Function to show QR code in modal
-function showQRCode(qrPath, eventName, date, startTime, endTime, location) {
+function showQRCode(qrPath, eventName, date, startTime, endTime, location, slotId) {
+    const validationUrl = window.location.origin + '/validate_attendance.php?slot=' + slotId;
     const modalContent = `
         <img src="${qrPath}" class="qr-modal-image" alt="QR Code">
         <div class="qr-info">
@@ -196,12 +187,27 @@ function showQRCode(qrPath, eventName, date, startTime, endTime, location) {
             <p class="mb-1"><strong>Date:</strong> ${date}</p>
             <p class="mb-1"><strong>Time:</strong> ${startTime} - ${endTime}</p>
             <p class="mb-0"><strong>Location:</strong> ${location}</p>
+            <hr>
+            <p class="mb-1"><strong>Direct URL:</strong></p>
+            <input type="text" class="form-control mb-2" value="${validationUrl}" readonly>
+            <div class="qr-actions">
+                <button class="btn btn-sm btn-outline-secondary" onclick="copyUrl('${validationUrl}')">
+                    <i class="bi bi-clipboard"></i> Copy URL
+                </button>
+                <a href="${qrPath}" download="QR_${eventName}_${date}.png" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-download"></i> Download QR
+                </a>
+            </div>
         </div>
     `;
     document.getElementById('qrModalContent').innerHTML = modalContent;
     new bootstrap.Modal(document.getElementById('qrModal')).show();
 }
-</script>
 
+function copyUrl(url) {
+    navigator.clipboard.writeText(url);
+    alert('URL copied to clipboard!');
+}
+</script>
 </body>
 </html>
