@@ -1,24 +1,45 @@
 <?php
-include('../config/dbconnection.php');
+session_start();
+$student_id = $_SESSION['student_id'] ?? null;
+if (!$student_id) {
+    header('Location: login.php');
+    exit;
+}
+
+include '../db_connect.php';
+
+// Fetch current active slot for student or event (customize as needed)
+$query = "SELECT id, event_name FROM attendance_slots WHERE event_date = CURDATE() LIMIT 1";
+$result = $conn->query($query);
+$slot = $result->fetch_assoc();
+
+if (!$slot) {
+    echo "No active attendance slots today.";
+    exit;
+}
+
+$scan_url = "http://yourdomain.com/student/scan_qr.php?slot_id=" . $slot['id'];
+
+// Generate QR code
+require '../phpqrcode/qrlib.php';
+ob_start();
+QRcode::png($scan_url, null, QR_ECLEVEL_L, 6);
+$imageString = base64_encode(ob_get_contents());
+ob_end_clean();
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
     <title>Attendance Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="bg-light">
-<div class="container mt-5">
-    <h2>Attendance Status</h2>
-    <?php if (isset($_GET['success'])): ?>
-        <div class="alert alert-success">Attendance recorded successfully!</div>
-    <?php endif; ?>
-    <?php if (isset($_GET['error'])): ?>
-        <div class="alert alert-danger">Invalid Student ID or Password!</div>
-    <?php endif; ?>
-    <a href="../advisor-dashboard.php" class="btn btn-outline-primary mb-3">← Back to Dashboard</a>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<body>
+<h2>Welcome, Student</h2>
+
+<h3>Scan this QR code to mark attendance for:</h3>
+<p><strong><?= htmlspecialchars($slot['event_name']) ?></strong></p>
+
+<img src="data:image/png;base64,<?= $imageString ?>" alt="QR Code">
+
 </body>
 </html>
