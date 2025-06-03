@@ -1,5 +1,7 @@
 <?php
 session_start();
+
+include('includes/header.php');
 include("includes/dbconnection.php");
 
 // Check if user is student
@@ -109,7 +111,7 @@ if (isset($_POST['update'])) {
             text-align: center;
         }
         .role-badge {
-            background: #007bff;
+            background: #789DBC;
             color: white;
             padding: 8px 20px;
             border-radius: 20px;
@@ -129,7 +131,7 @@ if (isset($_POST['update'])) {
         .avatar {
             width: 60px;
             height: 60px;
-            background: #007bff;
+            background: #789DBC;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -143,20 +145,6 @@ if (isset($_POST['update'])) {
 </head>
 
 <body class="bg-light">
-
-<div class="header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <img src="images/MyPetakom Logo.png" alt="PETAKOM Logo" class="logo">
-            </div>
-            <div class="col-md-6 text-right">
-                <a href="student-viewprofile.php" class="btn btn-light">Back to Profile</a>
-                <a href="user-logout.php" class="btn btn-danger">Logout</a>
-            </div>
-        </div>
-    </div>
-</div>
 
 <div class="container-main">
     <div class="form-container">
@@ -204,6 +192,10 @@ if (isset($_POST['update'])) {
         </form>
     </div>
 </div>
+
+<?php
+include('includes/footer.php');
+?>
 
 </body>
 </html>

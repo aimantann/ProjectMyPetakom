@@ -181,6 +181,7 @@ if (isset($_POST['submit'])) {
                 <div class="form-group">
                     <label for="role">Role</label>
                     <select class="form-control" id="role" name="role" required>
+                        <option value="student">---</option>
                         <option value="petakom_coordinator">Petakom Coordinator (Admin)</option>
                         <option value="event_advisor">Event Advisor</option>
                         <option value="student">Student</option>
