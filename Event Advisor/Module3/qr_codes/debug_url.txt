@@ -1,0 +1,1 @@
+http://localhost/ProjectMyPetakom/Student/Module3/validate_attendance.php?slot=22

@@ -143,7 +143,7 @@ if (isset($_SESSION['email'])) {
                 </a>
                 <ul class="collapse list-unstyled submenu" id="attendanceSubmenu">
                     <li>
-                        <a href="../Student/scan_qr.php">
+                        <a href="../Student/student-viewevents.php">
                             <i class="fas fa-qrcode me-2"></i> Scan QR Code
                         </a>
                     </li>

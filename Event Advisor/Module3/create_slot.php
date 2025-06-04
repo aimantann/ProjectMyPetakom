@@ -1,28 +1,39 @@
-<?php
+<?php 
 include 'db.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $slotName = $_POST['slot_name'];
-    $slotDate = $_POST['slot_date'];
-    $startTime = $_POST['start_time'];
-    $endTime = $_POST['end_time'];
-    $location = $_POST['location'];
-    $eventId = $_POST['event_id'];
-    
-    // QR code will be generated later, setting it as NULL for now
-    $stmt = $conn->prepare("INSERT INTO attendanceslot 
+    // Get POST data safely
+    $slotName = $_POST['S_Name'] ?? '';
+    $slotDate = $_POST['S_Date'] ?? '';
+    $startTime = $_POST['S_startTime'] ?? '';
+    $endTime = $_POST['S_endTime'] ?? '';
+    $location = $_POST['S_Location'] ?? '';
+    $eventId = $_POST['E_eventID'] ?? '';
+
+    // Basic validation
+    if ($slotName && $slotDate && $startTime && $endTime && $location && $eventId) {
+        // Prepare the insert statement
+        $stmt = $conn->prepare("INSERT INTO attendanceslot 
             (S_Name, S_Date, S_startTime, S_endTime, S_Location, S_qrCode, E_eventID) 
             VALUES (?, ?, ?, ?, ?, NULL, ?)");
-    $stmt->bind_param("sssssi", $slotName, $slotDate, $startTime, $endTime, $location, $eventId);
-    
-    if ($stmt->execute()) {
-        header("Location: view_attendanceslot.php?success=1");
+        $stmt->bind_param("sssssi", $slotName, $slotDate, $startTime, $endTime, $location, $eventId);
+
+        if ($stmt->execute()) {
+            header("Location: view_attendanceslot.php?success=1");
+            exit();
+        } else {
+            echo "Error executing query: " . $stmt->error;
+        }
     } else {
-        echo "Error: " . $conn->error;
+        echo "<div class='alert alert-danger'>Please fill in all fields.</div>";
     }
-    exit();
 }
-?> 
+
+// Fetch existing events
+$eventQuery = "SELECT E_eventID, E_name FROM event ORDER BY E_name ASC";
+$eventResult = $conn->query($eventQuery);
+
+?>
 
 <!DOCTYPE html>
 <html>
@@ -34,34 +45,89 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <div class="container mt-5">
   <h2>Create Attendance Slot</h2>
   <a href="../advisor-dashboard.php" class="btn btn-outline-primary mb-4">← Back to Dashboard</a>
-  <form method="POST" class="mt-4">
+
+  <form method="POST" class="mt-4" id="attendanceSlotForm">
     <div class="mb-3">
-      <label class="form-label">Event ID</label>
-      <input type="number" name="event_id" class="form-control" required>
+      <label class="form-label">Select Event</label>
+      <select name="E_eventID" class="form-control" id="eventSelect" required>
+        <option value="">-- Select Event --</option>
+        <?php 
+        // Reset pointer in case the query was used elsewhere
+        $eventResult->data_seek(0);
+        while ($row = $eventResult->fetch_assoc()): ?>
+          <option value="<?= htmlspecialchars($row['E_eventID']) ?>">
+            <?= htmlspecialchars($row['E_name']) ?>
+          </option>
+        <?php endwhile; ?>
+      </select>
     </div>
+
     <div class="mb-3">
       <label class="form-label">Slot Name</label>
-      <input type="text" name="slot_name" class="form-control" required>
+      <input type="text" name="S_Name" class="form-control" id="slotName" required>
     </div>
+
     <div class="mb-3">
       <label class="form-label">Date</label>
-      <input type="date" name="slot_date" class="form-control" required>
+      <input type="date" name="S_Date" class="form-control" id="slotDate" required>
     </div>
+
     <div class="mb-3">
       <label class="form-label">Start Time</label>
-      <input type="time" name="start_time" class="form-control" required>
+      <input type="time" name="S_startTime" class="form-control" required>
     </div>
+
     <div class="mb-3">
       <label class="form-label">End Time</label>
-      <input type="time" name="end_time" class="form-control" required>
+      <input type="time" name="S_endTime" class="form-control" required>
     </div>
+
     <div class="mb-3">
       <label class="form-label">Location</label>
-      <input type="text" name="location" class="form-control" required>
+      <input type="text" name="S_Location" class="form-control" id="slotLocation" required>
     </div>
+
     <button type="submit" class="btn btn-success">Create Slot</button>
     <a href="view_attendanceslot.php" class="btn btn-secondary">Cancel</a>
   </form>
 </div>
+
+<!-- Inline endpoint for event details AJAX -->
+<?php
+// Provide the AJAX handler inline for simplicity
+if (isset($_GET['fetch_event']) && isset($_GET['E_eventID'])) {
+    $eventId = intval($_GET['E_eventID']);
+    $sql = "SELECT E_name, E_date, E_location FROM event WHERE E_eventID = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $eventId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $event = $result->fetch_assoc();
+    header('Content-Type: application/json');
+    echo json_encode($event);
+    exit();
+}
+?>
+
+<script>
+document.getElementById('eventSelect').addEventListener('change', function() {
+    var eventId = this.value;
+    if (eventId) {
+        fetch('create_slot.php?fetch_event=1&E_eventID=' + eventId)
+        .then(response => response.json())
+        .then(data => {
+            if (data) {
+                document.getElementById('slotName').value = data.E_name || '';
+                document.getElementById('slotDate').value = data.E_date || '';
+                document.getElementById('slotLocation').value = data.E_location || '';
+            }
+        });
+    } else {
+        document.getElementById('slotName').value = '';
+        document.getElementById('slotDate').value = '';
+        document.getElementById('slotLocation').value = '';
+    }
+});
+</script>
 </body>
 </html>

@@ -1,0 +1,1 @@
+http://localhost/ProjectMyPetakom/Event%20Advisor/Module3/validate_attendance.php?slot_id=21

@@ -3,7 +3,8 @@ $servername = "localhost";
 $username = "root"; // database username
 $password = ""; // database password
 $dbname = "mypetakom_db";
-// database port
+
+
 
 // Create connection
 $conn = mysqli_connect($servername, $username, $password, $dbname);
