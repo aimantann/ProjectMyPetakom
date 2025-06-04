@@ -1,14 +1,35 @@
 <?php
 session_start();
+date_default_timezone_set('Asia/Kuala_Lumpur');
 include('includes/header.php');
 include("includes/dbconnection.php");
 
+// Check if user is logged in and is a student
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
+    $_SESSION['login_required'] = "Please login as a student to access this page.";
+    header('Location: user-login.php');
+    exit();
+}
+
 // Fetch claims from database with event names using JOIN
-$query = "SELECT mc.*, e.E_name 
-          FROM meritclaim mc 
-          LEFT JOIN event e ON mc.E_eventID = e.E_eventID 
-          ORDER BY MC_submitDate DESC";
-$result = mysqli_query($conn, $query);
+$query = "SELECT 
+    mc.MC_claimID,
+    e.E_name,
+    mc.MC_role,
+    mc.MC_claimStatus,
+    mc.MC_submitDate,
+    mc.MC_documentPath,
+    COALESCE(ma.MD_totalMerit, 0) as merit_awarded
+FROM meritclaim mc
+LEFT JOIN event e ON mc.E_eventID = e.E_eventID
+LEFT JOIN meritawarded ma ON mc.E_eventID = ma.E_eventID AND mc.U_userID = ma.U_userID
+WHERE mc.U_userID = ?
+ORDER BY mc.MC_submitDate DESC";
+
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $_SESSION['user_id']);
+$stmt->execute();
+$result = $stmt->get_result();
 
 // Handle success message
 $success_message = '';
@@ -516,7 +537,7 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
                             <th>Role</th>
                             <th>Status</th>
                             <th>Submit Date</th>
-                            <th>Document Path</th>
+                            <th>Official Letter</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -540,11 +561,16 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
                                         <?php echo htmlspecialchars($row['MC_claimStatus']); ?>
                                     </span>
                                 </td>
-                                <td><?php echo date('d M Y', strtotime($row['MC_submitDate'])); ?></td>
+                                <td>
+                                    <?php 
+                                        $submitDate = new DateTime($row['MC_submitDate']);
+                                        echo $submitDate->format('d M Y'); 
+                                    ?>
+                                </td>
                                 <td>
                                     <?php if($row['MC_documentPath']): ?>
                                         <a href="<?php echo htmlspecialchars($row['MC_documentPath']); ?>" target="_blank" class="document-link">
-                                            <i class="fas fa-file-alt"></i> View Document
+                                            <i class="fas fa-file-alt"></i> View
                                         </a>
                                     <?php else: ?>
                                         <span class="text-muted">No document</span>
@@ -554,7 +580,7 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
                                     <div class="action-buttons">
                                         <button class="btn-edit" 
                                                 onclick="editClaim(<?php echo $row['MC_claimID']; ?>)"
-                                                <?php echo strtolower($row['MC_claimStatus']) !== 'pending' ? 'disabled title="Can only edit pending claims"' : ''; ?>>
+                                                <?php echo strtolower($row['MC_claimStatus']) !== 'submitted' ? '' : 'disabled title="Cannot edit submitted claims"'; ?>>
                                             <i class="fas fa-edit"></i> Edit
                                         </button>
                                         <button class="btn-delete" onclick="deleteClaim(<?php echo $row['MC_claimID']; ?>)">

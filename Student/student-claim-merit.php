@@ -1,6 +1,8 @@
 <?php
 session_start();
+date_default_timezone_set('Asia/Kuala_Lumpur');
 include('includes/header.php');
+include("includes/dbconnection.php");
 
 // Check if user is logged in and is a student
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
@@ -9,12 +11,11 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
     exit();
 }
 
-include("includes/dbconnection.php");
-
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $event_id = $_POST['event_id'];
     $role = $_POST['role'];
+    $user_id = $_SESSION['user_id'];
     
     // Handle file upload
     $upload_dir = "uploads/merit_claims/";
@@ -49,66 +50,48 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $submit_date = date('Y-m-d H:i:s');
         $claim_status = 'Pending';
         
-        // Get user ID from session
-        $user_id = $_SESSION['user_id'];
+        // Check if claim already exists
+        $check_query = "SELECT MC_claimID FROM meritclaim 
+                       WHERE U_userID = ? AND E_eventID = ?";
+        $check_stmt = $conn->prepare($check_query);
+        $check_stmt->bind_param("ii", $user_id, $event_id);
+        $check_stmt->execute();
+        $existing_claim = $check_stmt->get_result()->fetch_assoc();
         
-        // Add error checking for user ID
-        if (!$user_id) {
-            $error_message = "Session expired. Please login again.";
-            header('Location: user-login.php');
-            exit();
-        }
-        
-        // Update SQL to include user_id
-        $sql = "INSERT INTO meritclaim (E_eventID, MC_role, MC_documentPath, MC_submitDate, MC_claimStatus, U_userID) 
-                VALUES (?, ?, ?, ?, ?, ?)";
-        
-        $stmt = $conn->prepare($sql);
-        
-        if ($stmt === false) {
-            die("Error preparing statement: " . $conn->error);
-        }
-        
-        if (!$stmt->bind_param("issssi", $event_id, $role, $file_path, $submit_date, $claim_status, $user_id)) {
-            die("Error binding parameters: " . $stmt->error);
-        }
-        
-        if ($stmt->execute()) {
-            header('Location: student-my-merit-claims.php?success=1');
-            exit();
+        if (!$existing_claim) {
+            $sql = "INSERT INTO meritclaim (E_eventID, U_userID, MC_role, MC_documentPath, MC_submitDate, MC_claimStatus) 
+                    VALUES (?, ?, ?, ?, ?, ?)";
+            
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("iissss", $event_id, $user_id, $role, $file_path, $submit_date, $claim_status);
+            
+            if ($stmt->execute()) {
+                echo "<script>
+                    window.location.href = 'student-my-merit-claims.php?success=1';
+                </script>";
+                exit();
+            }
+            
+            $stmt->close();
         } else {
-            $error_message = "Error submitting claim: " . $stmt->error;
+            $error_message = "You have already submitted a claim for this event.";
         }
-        
-        $stmt->close();
+        $check_stmt->close();
     }
 }
 
-// Get user information for display
-$user_query = "SELECT U_name FROM user WHERE U_userID = ?";
-$stmt = $conn->prepare($user_query);
-$stmt->bind_param("i", $_SESSION['U_userID']);
-$stmt->execute();
-$result = $stmt->get_result();
-$user_data = $result->fetch_assoc();
-$stmt->close();
+// Get available events
+$events_query = "SELECT e.E_eventID, e.E_name 
+                FROM event e 
+                WHERE e.E_eventStatus = 'Active' 
+                AND e.E_endDate >= CURDATE()
+                ORDER BY e.E_startDate DESC";
+$events_result = mysqli_query($conn, $events_query);
 
-// Get current date for comparison
-$current_date = date('Y-m-d H:i:s');
-
-// Fetch active events from database
-$events_query = "SELECT E_eventID as id, E_name as name 
-                FROM event 
-                WHERE E_eventStatus = 'Active' 
-                AND E_endDate >= CURDATE()
-                ORDER BY E_startDate ASC";
-$events_result = $conn->query($events_query);
+// Store events in array
 $events = [];
-
-if ($events_result && $events_result->num_rows > 0) {
-    while($row = $events_result->fetch_assoc()) {
-        $events[] = $row;
-    }
+while ($row = mysqli_fetch_assoc($events_result)) {
+    $events[] = $row;
 }
 
 $conn->close();
@@ -183,6 +166,15 @@ $conn->close();
         .required {
             color: red;
         }
+
+        .alert {
+            opacity: 1;
+            transition: opacity 5s ease-out;
+        }
+
+        .alert.fade-out {
+            opacity: 0;
+        }
     </style>
 </head>
 <body>
@@ -190,21 +182,14 @@ $conn->close();
         <div class="card mb-4">
             <div class="card-header p-3">
                 <div class="d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                        <a href="student-dashboard.php" class="btn btn-primary me-3">
-                            <i class="fas fa-arrow-left"></i> Back
-                        </a>
+                    <div>
                         <h4 class="mb-0">Claim Merit</h4>
-                    </div>
-                    <div class="text-end">
-                        <p class="mb-0 fw-bold"><?php echo htmlspecialchars($user_data['U_name'] ?? 'User'); ?></p>
-                        <small class="text-muted">User ID: <?php echo htmlspecialchars($_SESSION['U_userID']); ?></small>
                     </div>
                 </div>
             </div>
             <div class="card-body p-4">
                 <?php if (isset($error_message)): ?>
-                    <div class="alert alert-danger" role="alert">
+                    <div class="alert alert-danger" role="alert" id="errorAlert">
                         <i class="fas fa-exclamation-circle me-2"></i>
                         <?php echo $error_message; ?>
                     </div>
@@ -220,8 +205,8 @@ $conn->close();
                             <option value="">-- Choose an Event --</option>
                             <?php if (!empty($events)): ?>
                                 <?php foreach ($events as $event): ?>
-                                    <option value="<?php echo $event['id']; ?>">
-                                        <?php echo htmlspecialchars($event['name']); ?>
+                                    <option value="<?php echo $event['E_eventID']; ?>">
+                                        <?php echo htmlspecialchars($event['E_name']); ?>
                                     </option>
                                 <?php endforeach; ?>
                             <?php else: ?>
@@ -272,7 +257,7 @@ $conn->close();
                     <!-- File Upload -->
                     <div class="mb-4">
                         <label class="form-label fw-bold">
-                            Official Participation Letter <span class="required">*</span>
+                            Official Letter <span class="required">*</span>
                         </label>
                         <div class="file-upload">
                             <input type="file" class="form-control" name="participation_letter" 
@@ -301,46 +286,57 @@ $conn->close();
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
     
     <script>
-        // File upload handler
-        document.getElementById('participation_letter').addEventListener('change', function(e) {
-            const fileInfo = document.getElementById('file-info');
-            const file = e.target.files[0];
+    // File upload handler
+    document.getElementById('participation_letter').addEventListener('change', function(e) {
+        const fileInfo = document.getElementById('file-info');
+        const file = e.target.files[0];
+        
+        if (file) {
+            const fileSize = (file.size / 1024 / 1024).toFixed(2);
+            fileInfo.innerHTML = `
+                <i class="fas fa-file me-2"></i>
+                Selected: ${file.name} (${fileSize} MB)
+            `;
+            fileInfo.style.display = 'block';
             
-            if (file) {
-                const fileSize = (file.size / 1024 / 1024).toFixed(2);
-                fileInfo.innerHTML = `
-                    <i class="fas fa-file me-2"></i>
-                    Selected: ${file.name} (${fileSize} MB)
-                `;
-                fileInfo.style.display = 'block';
-                
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('File size must be less than 5MB');
-                    e.target.value = '';
-                    fileInfo.style.display = 'none';
-                }
-            } else {
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size must be less than 5MB');
+                e.target.value = '';
                 fileInfo.style.display = 'none';
             }
-        });
+        } else {
+            fileInfo.style.display = 'none';
+        }
+    });
 
-        // Form validation
-        document.getElementById('claimForm').addEventListener('submit', function(e) {
-            const eventId = document.getElementById('event_id').value;
-            const role = document.querySelector('input[name="role"]:checked');
-            const file = document.getElementById('participation_letter').files[0];
+    // Form validation
+    document.getElementById('claimForm').addEventListener('submit', function(e) {
+        const eventId = document.getElementById('event_id').value;
+        const role = document.querySelector('input[name="role"]:checked');
+        const file = document.getElementById('participation_letter').files[0];
 
-            if (!eventId || !role || !file) {
-                e.preventDefault();
-                alert('Please fill in all required fields');
-                return false;
-            }
+        if (!eventId || !role || !file) {
+            e.preventDefault();
+            alert('Please fill in all required fields');
+            return false;
+        }
 
-            const submitBtn = this.querySelector('button[type="submit"]');
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Submitting...';
-            submitBtn.disabled = true;
-        });
-    </script>
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Submitting...';
+        submitBtn.disabled = true;
+    });
+
+    // Add fade out effect for error message
+    const errorAlert = document.getElementById('errorAlert');
+    if (errorAlert) {
+        setTimeout(() => {
+            errorAlert.classList.add('fade-out');
+            setTimeout(() => {
+                errorAlert.style.display = 'none';
+            }, 5000); // Wait for fade out animation to complete
+        }, 100);
+    }
+</script>
 <?php
 include('includes/footer.php');
 ?>

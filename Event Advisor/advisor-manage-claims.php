@@ -1,60 +1,145 @@
 <?php
 session_start();
+date_default_timezone_set('Asia/Kuala_Lumpur');
 include('includes/header.php');
 include("includes/dbconnection.php");
 
-// Handle approval/rejection
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
-    $claim_id = intval($_POST['claim_id']);
+// Check if user is logged in and is an advisor
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'event_advisor') {
+    $_SESSION['login_required'] = "Please login as an advisor to access this page.";
+    header('Location: user-login.php');
+    exit();
+}
+
+// Handle claim actions (approve/reject)
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && isset($_POST['claim_id'])) {
     $action = $_POST['action'];
-    $merit_points = isset($_POST['merit_points']) ? intval($_POST['merit_points']) : 0;
+    $claim_id = $_POST['claim_id'];
     
-    if ($action === 'approve') {
-        // Update claim status to Approved
-        $update_query = "UPDATE meritclaim SET MC_claimStatus = 'Approved' WHERE MC_claimID = $claim_id";
-        
-        if (mysqli_query($conn, $update_query)) {
-            // Insert into meritawarded table
-            $award_query = "INSERT INTO meritawarded (MC_claimID, MD_totalMerit) VALUES ($claim_id, $merit_points)";
+    try {
+        // Start transaction
+        $conn->begin_transaction();
+
+        // Get claim details first
+        $get_claim_query = "SELECT mc.*, e.E_name, e.E_level 
+                           FROM meritclaim mc
+                           JOIN event e ON mc.E_eventID = e.E_eventID
+                           WHERE mc.MC_claimID = ?";
+        $claim_stmt = $conn->prepare($get_claim_query);
+        $claim_stmt->bind_param("i", $claim_id);
+        $claim_stmt->execute();
+        $claim_result = $claim_stmt->get_result();
+        $claim_data = $claim_result->fetch_assoc();
+
+        if ($claim_data) {
+            $current_datetime = date('Y-m-d H:i:s');
             
-            if (mysqli_query($conn, $award_query)) {
-                $success_message = "Claim approved successfully and merit points awarded!";
-            } else {
-                $error_message = "Claim approved but failed to award merit points: " . mysqli_error($conn);
+            if ($action === 'approve') {
+                // Calculate merit points based on event level and role
+                $merit_points = calculateMeritPoints($claim_data['E_level'], $claim_data['MC_role']);
+                
+                // Update claim status
+                $update_query = "UPDATE meritclaim 
+                               SET MC_claimStatus = 'Approved', 
+                                   MA_approvedBy = ?,
+                                   MC_approvedDate = ? 
+                               WHERE MC_claimID = ?";
+                $update_stmt = $conn->prepare($update_query);
+                $update_stmt->bind_param("ssi", $_SESSION['user_id'], $current_datetime, $claim_id);
+                $update_stmt->execute();
+
+                // Insert into meritawarded table
+                $award_query = "INSERT INTO meritawarded 
+                              (U_userID, E_eventID, MD_totalMerit, MD_awardedDate) 
+                              VALUES (?, ?, ?, ?)";
+                $award_stmt = $conn->prepare($award_query);
+                $award_stmt->bind_param("iiis", 
+                    $claim_data['U_userID'], 
+                    $claim_data['E_eventID'], 
+                    $merit_points,
+                    $current_datetime
+                );
+                $award_stmt->execute();
+
+            } elseif ($action === 'reject') {
+                // Update claim status to rejected
+                $update_query = "UPDATE meritclaim 
+                               SET MC_claimStatus = 'Rejected', 
+                                   MA_approvedBy = ?,
+                                   MC_rejectedDate = ? 
+                               WHERE MC_claimID = ?";
+                $update_stmt = $conn->prepare($update_query);
+                $update_stmt->bind_param("ssi", $_SESSION['user_id'], $current_datetime, $claim_id);
+                $update_stmt->execute();
             }
+
+            // Commit transaction
+            $conn->commit();
+            $success_message = "Claim successfully " . ($action === 'approve' ? 'approved' : 'rejected');
+
         } else {
-            $error_message = "Failed to approve claim: " . mysqli_error($conn);
+            throw new Exception("Claim not found");
         }
-    } elseif ($action === 'reject') {
-        // Update claim status to Rejected
-        $update_query = "UPDATE meritclaim SET MC_claimStatus = 'Rejected' WHERE MC_claimID = $claim_id";
-        
-        if (mysqli_query($conn, $update_query)) {
-            $success_message = "Claim rejected successfully!";
-        } else {
-            $error_message = "Failed to reject claim: " . mysqli_error($conn);
-        }
+
+    } catch (Exception $e) {
+        // Rollback transaction on error
+        $conn->rollback();
+        $error_message = "Error processing claim: " . $e->getMessage();
     }
 }
 
-// Fetch all claims with event names and user names from the respective tables
-$query = "SELECT mc.*, e.E_name, u.U_name 
-          FROM meritclaim mc 
-          LEFT JOIN event e ON mc.E_eventID = e.E_eventID 
-          LEFT JOIN user u ON mc.U_userID = u.U_userID 
-          ORDER BY mc.MC_submitDate DESC";
-$result = mysqli_query($conn, $query);
+// Get all claims with related information
+$main_query = "SELECT 
+    mc.MC_claimID,
+    e.E_name as event_name,
+    e.E_level as event_level,
+    u.U_name as student_name,
+    u.U_userID as student_id,
+    mc.MC_role,
+    mc.MC_claimStatus,
+    mc.MC_submitDate,
+    mc.MC_documentPath,
+    COALESCE(ma.MD_totalMerit, 0) as merit_awarded,
+    ma.MD_awardID
+FROM meritclaim mc
+JOIN event e ON mc.E_eventID = e.E_eventID
+JOIN user u ON mc.U_userID = u.U_userID
+LEFT JOIN meritawarded ma ON mc.E_eventID = ma.E_eventID 
+    AND mc.U_userID = ma.U_userID
+WHERE mc.MC_claimStatus = 'Submitted'
+ORDER BY mc.MC_submitDate DESC";
 
-if (!$result) {
-    die("Query failed: " . mysqli_error($conn));
+// Get statistics for dashboard
+$stats_query = "SELECT 
+    MC_claimStatus,
+    COUNT(*) as count
+FROM meritclaim
+GROUP BY MC_claimStatus";
+
+try {
+    // Execute main query
+    $result = $conn->query($main_query);
+    $claims = [];
+    while ($row = $result->fetch_assoc()) {
+        $claims[] = $row;
+    }
+
+    // Execute statistics query
+    $stats_result = $conn->query($stats_query);
+    $statistics = [];
+    while ($row = $stats_result->fetch_assoc()) {
+        $statistics[$row['MC_claimStatus']] = $row['count'];
+    }
+
+    // Get total merit points awarded
+    $total_merit_query = "SELECT COALESCE(SUM(MD_totalMerit), 0) as total_merit 
+                         FROM meritawarded";
+    $total_merit_result = $conn->query($total_merit_query);
+    $total_merit = $total_merit_result->fetch_assoc()['total_merit'];
+
+} catch (Exception $e) {
+    $error_message = "Error retrieving claims: " . $e->getMessage();
 }
-
-// Merit points based on role
-$merit_points_by_role = [
-    'Participant' => 30,
-    'Committee' => 50,
-    'Main Committee' => 70
-];
 ?>
 
 <!DOCTYPE html>
@@ -265,6 +350,10 @@ $merit_points_by_role = [
             display: inline-flex;
             align-items: center;
             gap: 5px;
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
         }
 
         .document-link:hover {
@@ -460,10 +549,6 @@ $merit_points_by_role = [
         <!-- Header -->
         <div class="header">
             <div class="header-left">
-                <a href="advisor-dashboard.php" class="back-btn">
-                    <i class="fas fa-arrow-left"></i>
-                    Back
-                </a>
                 <h1 class="page-title">Review Claim</h1>
             </div>
         </div>
@@ -484,73 +569,74 @@ $merit_points_by_role = [
         <?php endif; ?>
 
         <!-- Claims Table -->
-        <div class="claims-container">
-            <div class="table-header">
-                <h2 class="table-title">Review Claims</h2>
-            </div>
-
-            <?php if (mysqli_num_rows($result) > 0): ?>
-                <table class="claims-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Event Name</th>
-                            <th>Role</th>
-                            <th>Submit Date</th>
-                            <th>Document</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php while($row = mysqli_fetch_assoc($result)): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($row['U_name'] ?? 'Unknown User'); ?></td>
-                                <td><?php echo htmlspecialchars($row['E_name'] ?? 'Unknown Event'); ?></td>
-                                <td>
-                                    <span class="role-badge <?php 
-                                        echo $row['MC_role'] === 'Main Committee' ? 'role-main' : 
-                                            ($row['MC_role'] === 'Committee' ? 'role-committee' : 'role-participant'); 
-                                    ?>">
-                                        <?php echo htmlspecialchars($row['MC_role']); ?>
-                                    </span>
-                                </td>
-                                <td><?php echo date('d M Y', strtotime($row['MC_submitDate'])); ?></td>
-                                <td>
-                                    <?php if($row['MC_documentPath']): ?>
-                                        <a href="<?php echo htmlspecialchars($row['MC_documentPath']); ?>" target="_blank" class="document-link">
-                                            <i class="fas fa-file-alt"></i> View
-                                        </a>
-                                    <?php else: ?>
-                                        <span class="text-muted">No document</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <div class="action-buttons">
-                                        <?php if (strtolower($row['MC_claimStatus']) === 'pending'): ?>
-                                            <button class="btn-approve" 
-                                                    onclick="approveClaim(<?php echo $row['MC_claimID']; ?>, '<?php echo $row['MC_role']; ?>', <?php echo $merit_points_by_role[$row['MC_role']]; ?>)">
-                                                <i class="fas fa-check"></i> Approve
-                                            </button>
-                                            <button class="btn-reject" 
-                                                    onclick="rejectClaim(<?php echo $row['MC_claimID']; ?>)">
-                                                <i class="fas fa-times"></i> Reject
-                                            </button>
-                                        <?php else: ?>
-                                            <span class="text-muted">No actions available</span>
-                                        <?php endif; ?>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endwhile; ?>
-                    </tbody>
-                </table>
-            <?php else: ?>
-                <div class="no-claims">
-                    <i class="fas fa-clipboard-list" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i>
-                    <p>No merit claims found.</p>
-                </div>
-            <?php endif; ?>
+<div class="claims-container">
+    <?php if (mysqli_num_rows($result) > 0): ?>
+        <table class="claims-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Event Name</th>
+                    <th>Role</th>
+                    <th>Submit Date</th>
+                    <th>Document</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php while($row = mysqli_fetch_assoc($result)): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($row['U_name'] ?? 'Unknown User'); ?></td>
+                        <td><?php echo htmlspecialchars($row['E_name'] ?? 'Unknown Event'); ?></td>
+                        <td>
+                            <span class="role-badge <?php 
+                                echo $row['MC_role'] === 'Main Committee' ? 'role-main' : 
+                                     ($row['MC_role'] === 'Committee' ? 'role-committee' : 'role-participant'); 
+                            ?>">
+                                <?php echo htmlspecialchars($row['MC_role']); ?>
+                            </span>
+                        </td>
+                        <td><?php echo date('d M Y', strtotime($row['MC_submitDate'])); ?></td>
+                        <td>
+                            <?php if($row['MC_documentPath']): ?>
+                                <?php
+                                $documentPath = $row['MC_documentPath'];
+                                ?>
+                                <a href="<?php echo htmlspecialchars($documentPath); ?>" 
+                                    target="_blank" 
+                                    class="document-link">
+                                    <i class="fas fa-file-alt"></i> View
+                                </a>
+                            <?php else: ?>
+                                <span class="text-muted">No document</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <?php if (strtolower($row['MC_claimStatus']) === 'pending'): ?>
+                                    <button class="btn-approve" 
+                                            onclick="approveClaim(<?php echo $row['MC_claimID']; ?>, '<?php echo $row['MC_role']; ?>', <?php echo $merit_points_by_role[$row['MC_role']]; ?>)">
+                                        <i class="fas fa-check"></i> Approve
+                                    </button>
+                                    <button class="btn-reject" 
+                                            onclick="rejectClaim(<?php echo $row['MC_claimID']; ?>)">
+                                        <i class="fas fa-times"></i> Reject
+                                    </button>
+                                <?php else: ?>
+                                    <span class="text-muted">No actions available</span>
+                                <?php endif; ?>
+                            </div>
+                        </td>
+                    </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
+    <?php else: ?>
+        <div class="no-claims">
+            <i class="fas fa-clipboard-list" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i>
+            <p>No merit claims found.</p>
         </div>
+    <?php endif; ?>
+</div>
     </div>
 
     <!-- Approval Modal -->
@@ -609,10 +695,10 @@ $merit_points_by_role = [
     </div>
 
     <script>
-        function approveClaim(claimId, role, meritPoints) {
+        function approveClaim(claimId, role) {
             document.getElementById('approve-claim-id').value = claimId;
             document.getElementById('approve-role').value = role;
-            document.getElementById('merit_points').value = meritPoints;
+            document.getElementById('merit_points').value = merit_points_by_role[role] || 0;
             document.getElementById('approvalModal').style.display = 'block';
         }
 
@@ -624,6 +710,23 @@ $merit_points_by_role = [
         function closeModal() {
             document.getElementById('approvalModal').style.display = 'none';
             document.getElementById('rejectionModal').style.display = 'none';
+        }
+
+        // Update window click handler to include document preview modal
+        window.onclick = function(event) {
+            const approvalModal = document.getElementById('approvalModal');
+            const rejectionModal = document.getElementById('rejectionModal');
+            const documentPreviewModal = document.getElementById('documentPreviewModal');
+            
+            if (event.target === approvalModal) {
+                closeModal();
+            }
+            if (event.target === rejectionModal) {
+                closeModal();
+            }
+            if (event.target === documentPreviewModal) {
+                closeDocumentPreview();
+            }
         }
 
         // Close modal when clicking outside
