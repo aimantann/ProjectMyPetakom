@@ -35,8 +35,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && isset($_P
             $current_datetime = date('Y-m-d H:i:s');
             
             if ($action === 'approve') {
-                // Calculate merit points based on event level and role
-                $merit_points = calculateMeritPoints($claim_data['E_level'], $claim_data['MC_role']);
                 
                 // Update claim status
                 $update_query = "UPDATE meritclaim 
@@ -106,7 +104,7 @@ JOIN event e ON mc.E_eventID = e.E_eventID
 JOIN user u ON mc.U_userID = u.U_userID
 LEFT JOIN meritawarded ma ON mc.E_eventID = ma.E_eventID 
     AND mc.U_userID = ma.U_userID
-WHERE mc.MC_claimStatus = 'Submitted'
+WHERE mc.MC_claimStatus = 'Pending'  /* Changed from 'Submitted' to 'Pending' */
 ORDER BY mc.MC_submitDate DESC";
 
 // Get statistics for dashboard
