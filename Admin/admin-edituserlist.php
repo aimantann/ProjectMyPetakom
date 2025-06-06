@@ -1,7 +1,9 @@
 <?php
+ob_start();
 session_start();
-include('includes/header.php');
+
 include("includes/dbconnection.php");
+include('includes/header.php');
 
 // Handle delete action
 if (isset($_GET['delete']) && isset($_GET['id'])) {
@@ -196,6 +198,8 @@ if (isset($_GET['delete']) && isset($_GET['id'])) {
 
 <?php
 include('includes/footer.php');
+
+ob_end_flush();
 ?>
 
 </body>

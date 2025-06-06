@@ -38,7 +38,7 @@ $qrContent .= "END:VEVENT";
 if (!function_exists('imagecreate')) {
     // Output as text QR code if GD not available
     $qrCodeText = QRcode::text($qrContent);
-    echo '<pre style="font-family: monospace; line-height: 1; font-size: 10px;">'.$qrCodeText.'</pre>';
+    echo '<pre style="font-family: monospace; line-height: 1; font-size: 10px;">'.implode("\n", $qrCodeText).'</pre>';
     echo '<p>Scan this text QR code with your device</p>';
 } else {
     // Output as PNG image

@@ -1,8 +1,9 @@
 <?php
+ob_start();
 session_start();
-include('includes/header.php');
-include('includes/dbconnection.php');
 
+include('includes/dbconnection.php');
+include('includes/header.php');
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $name = trim($_POST['name']);
@@ -288,6 +289,8 @@ document.getElementById('password').addEventListener('input', function() {
 
 <?php
 include('includes/footer.php');
+
+ob_end_flush();
 ?>
 
 </body>

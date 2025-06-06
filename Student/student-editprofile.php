@@ -1,9 +1,9 @@
 <?php
+ob_start();
 session_start();
 
-include('includes/header.php');
 include("includes/dbconnection.php");
-
+include("includes/header.php");
 // Check if user is student
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'student') {
     header("Location: user-login.php");
@@ -195,6 +195,8 @@ if (isset($_POST['update'])) {
 
 <?php
 include('includes/footer.php');
+
+ob_end_flush();
 ?>
 
 </body>

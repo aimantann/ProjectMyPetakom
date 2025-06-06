@@ -36,8 +36,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($slotName && $slotDate && $startTime && $endTime && $location && $eventId) {
         // Prepare the insert statement
         $stmt = $conn->prepare("INSERT INTO attendanceslot 
-            (S_Name, S_Date, S_startTime, S_endTime, S_Location, S_qrCode, E_eventID) 
-            VALUES (?, ?, ?, ?, ?, NULL, ?)");
+            (S_Name, S_Date, S_startTime, S_endTime, S_Location, E_eventID) 
+            VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("sssssi", $slotName, $slotDate, $startTime, $endTime, $location, $eventId);
 
         if ($stmt->execute()) {

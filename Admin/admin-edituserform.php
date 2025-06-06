@@ -1,8 +1,9 @@
 <?php
+ob_start();
 session_start();
 
-include('includes/header.php');
 include("includes/dbconnection.php");
+include("includes/header.php");
 
 if (!isset($_GET['id'])) {
     header("Location: admin-edituserlist.php");
@@ -107,21 +108,7 @@ if (isset($_POST['update'])) {
 </head>
 
 <body class="bg-light">
-
-<div class="header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <img src="images/MyPetakom Logo.png" alt="PETAKOM Logo" class="logo">
-            </div>
-            <div class="col-md-6 text-right">
-                <a href="edit-users-list.php" class="btn btn-secondary">Back to Users List</a>
-                <a href="user-logout.php" class="btn btn-danger">Logout</a>
-            </div>
-        </div>
-    </div>
-</div>
-
+    
 <div class="container-main">
     <div class="form-container">
         <h2 class="page-title">Edit User Details</h2>
@@ -178,6 +165,8 @@ if (isset($_POST['update'])) {
 
 <?php
 include('includes/footer.php');
+
+ob_end_flush();
 ?>
 
 </body>
