@@ -1,5 +1,7 @@
 <?php
-include '../includes/dbconnection.php';
+session_start();
+require_once('includes/dbconnection.php');
+require_once('includes/header.php');
 
 if (isset($_GET['slot'])) {
     $slotId = $_GET['slot'];
@@ -36,10 +38,23 @@ if (isset($_GET['slot'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { padding: 20px; background-color: #f8f9fa; }
-        .container { max-width: 500px; margin: 0 auto; }
-        .card { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .event-header { background-color: #f1f8ff; padding: 15px; border-radius: 8px 8px 0 0; }
+        body { 
+            padding: 20px; 
+            background-color: #f8f9fa; 
+        }
+        .container { 
+            max-width: 500px; 
+            margin: 0 auto; 
+        }
+        .card { 
+            border-radius: 10px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+        }
+        .event-header { 
+            background-color: #f1f8ff; 
+            padding: 15px; 
+            border-radius: 8px 8px 0 0; 
+        }
     </style>
 </head>
 <body>
@@ -72,12 +87,12 @@ if (isset($_GET['slot'])) {
                 </div>
 
                 <form action="validate_attendance.php" method="POST" id="attendanceForm">
-                    <input type="hidden" name="slot_id" value="<?php echo $slotId; ?>">
+                    <input type="hidden" name="slot" value="<?php echo $slotId; ?>">
                     
                     <div class="mb-3">
-                        <label class="form-label">Student ID</label>
-                        <input type="text" class="form-control" name="student_id" required 
-                               placeholder="Enter your student ID">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" required 
+                               placeholder="Enter your email">
                     </div>
                     
                     <div class="mb-3">
@@ -87,37 +102,14 @@ if (isset($_GET['slot'])) {
                     </div>
                     
                     <button type="submit" class="btn btn-primary w-100 py-2">
-                        <i class="bi bi-check-circle-fill"></i> Check In
+                        Check In
                     </button>
                 </form>
             </div>
         </div>
     </div>
     
-    <script>
-        document.getElementById('attendanceForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const form = this;
-            const submitBtn = form.querySelector('button[type="submit"]');
-            
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-            
-            fetch(form.action, {
-                method: 'POST',
-                body: new FormData(form)
-            })
-            .then(response => response.text())
-            .then(html => {
-                document.body.innerHTML = html;
-            })
-            .catch(error => {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Check In';
-                alert('An error occurred. Please try again.');
-            });
-        });
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
 <?php

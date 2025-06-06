@@ -1,14 +1,14 @@
-<?php 
-include 'db.php';
+<?php
+require_once('includes/dbconnection.php');
+require_once('includes/header.php');
 
-// Set current user and datetime
-$currentDateTime = "2025-06-02 16:08:21";
-$currentUser = "AthirahSN";
-
-// Log page access
-error_log("[$currentDateTime] User $currentUser accessed view_attendanceslot.php");
+// Fetch attendance slots with DISTINCT to avoid duplicates
+$query = "SELECT DISTINCT a.*, e.E_name 
+          FROM attendanceslot a
+          JOIN event e ON a.E_eventID = e.E_eventID 
+          ORDER BY a.S_slotID DESC";
+$result = $conn->query($query);
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -22,10 +22,6 @@ error_log("[$currentDateTime] User $currentUser accessed view_attendanceslot.php
         .slot-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        .datetime-info {
-            font-size: 0.8rem;
-            color: #6c757d;
         }
         .qr-modal-image {
             max-width: 300px;
@@ -71,14 +67,11 @@ error_log("[$currentDateTime] User $currentUser accessed view_attendanceslot.php
 <div class="container mt-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Attendance Slot List</h2>
-        <div class="datetime-info">
-            Last Updated: <?php echo $currentDateTime; ?> UTC
-        </div>
     </div>
 
     <div class="row mb-4">
         <div class="col">
-            <a href="../advisor-dashboard.php" class="btn btn-outline-primary">← Back to Dashboard</a>
+            <a href="advisor-dashboard.php" class="btn btn-outline-primary">← Back to Dashboard</a>
             <a href="create_slot.php" class="btn btn-success ms-2">+ Create Attendance Slot</a>
         </div>
     </div>
@@ -98,12 +91,6 @@ error_log("[$currentDateTime] User $currentUser accessed view_attendanceslot.php
     <?php endif; ?>
 
     <?php
-    $query = "SELECT attendanceslot.*, event.E_name 
-              FROM attendanceslot 
-              JOIN event ON attendanceslot.E_eventID = event.E_eventID 
-              ORDER BY attendanceslot.S_slotID DESC";
-    $result = $conn->query($query);
-
     if ($result && $result->num_rows > 0) {
         while($row = $result->fetch_assoc()) {
             $startTime = date('h:i A', strtotime($row['S_startTime']));
@@ -112,54 +99,52 @@ error_log("[$currentDateTime] User $currentUser accessed view_attendanceslot.php
             $slotName = htmlspecialchars($row['S_Name']);
             $slotLocation = htmlspecialchars($row['S_Location']);
             $qrPath = "qr_codes/slot_" . $row['S_slotID'] . ".png";
-
-            echo "<div class='card slot-card mb-3'>
-                    <div class='card-body'>
-                        <div class='row'>
-                            <div class='col-md-8'>
-                                <h5 class='card-title mb-1'>Slot ID: {$row['S_slotID']}</h5>
-                                <p class='mb-1'><strong>Slot Name:</strong> $slotName</p>
-                                <p class='mb-1'><strong>Location:</strong> $slotLocation</p>
-                                <p class='mb-1'><strong>Date:</strong> $slotDate</p>
-                                <p class='card-text mb-1'>
-                                    <strong>Event:</strong> {$row['E_name']} (ID: {$row['E_eventID']})<br>
-                                    <strong>Time:</strong> {$startTime} - {$endTime}<br>
-                                    <strong>QR Code Status:</strong> ";
-                                    
-            echo ($row['S_qrStatus'] === 'Generated') 
-                ? '<span class="badge bg-success">Generated</span>' 
-                : '<span class="badge bg-warning text-dark">Not Generated</span>';
-            
-            echo "          </p>
-                            </div>
-                            <div class='col-md-4 text-md-end'>
-                                <div class='btn-group' role='group'>
-                                    <a href='edit_slot.php?id={$row['S_slotID']}' class='btn btn-primary btn-sm'>
-                                        <i class='bi bi-pencil'></i> Edit
+            ?>
+            <div class='card slot-card mb-3'>
+                <div class='card-body'>
+                    <div class='row'>
+                        <div class='col-md-8'>
+                            <h5 class='card-title mb-1'>Slot ID: <?php echo $row['S_slotID']; ?></h5>
+                            <p class='mb-1'><strong>Slot Name:</strong> <?php echo $slotName; ?></p>
+                            <p class='mb-1'><strong>Location:</strong> <?php echo $slotLocation; ?></p>
+                            <p class='mb-1'><strong>Date:</strong> <?php echo $slotDate; ?></p>
+                            <p class='card-text mb-1'>
+                                <strong>Event:</strong> <?php echo $row['E_name']; ?> (ID: <?php echo $row['E_eventID']; ?>)<br>
+                                <strong>Time:</strong> <?php echo $startTime; ?> - <?php echo $endTime; ?><br>
+                                <strong>QR Code Status:</strong> 
+                                <?php echo ($row['S_qrStatus'] === 'Generated') 
+                                    ? '<span class="badge bg-success">Generated</span>' 
+                                    : '<span class="badge bg-warning text-dark">Not Generated</span>';
+                                ?>
+                            </p>
+                        </div>
+                        <div class='col-md-4 text-md-end'>
+                            <div class='btn-group' role='group'>
+                                <a href='edit_slot.php?id=<?php echo $row['S_slotID']; ?>' class='btn btn-primary btn-sm'>
+                                    <i class='bi bi-pencil'></i> Edit
+                                </a>
+                                <a href='delete_slot.php?id=<?php echo $row['S_slotID']; ?>' 
+                                   class='btn btn-danger btn-sm'
+                                   onclick='return confirm("Are you sure you want to delete this slot?");'>
+                                    <i class='bi bi-trash'></i> Delete
+                                </a>
+                                <?php if ($row['S_qrStatus'] === 'Generated'): ?>
+                                    <button type='button' 
+                                            class='btn btn-info btn-sm' 
+                                            onclick='showQRCode("<?php echo $qrPath; ?>", "<?php echo $row['E_name']; ?>", "<?php echo $slotDate; ?>", "<?php echo $startTime; ?>", "<?php echo $endTime; ?>", "<?php echo $slotLocation; ?>", "<?php echo $row['S_slotID']; ?>")'>
+                                        <i class='bi bi-qr-code'></i> View QR
+                                    </button>
+                                <?php else: ?>
+                                    <a href='generate_qr.php?slot_id=<?php echo $row['S_slotID']; ?>' class='btn btn-secondary btn-sm'>
+                                        <i class='bi bi-qr-code'></i> Generate QR
                                     </a>
-                                    <a href='delete_slot.php?id={$row['S_slotID']}' 
-                                       class='btn btn-danger btn-sm'
-                                       onclick='return confirm(\"Are you sure you want to delete this slot?\");'>
-                                        <i class='bi bi-trash'></i> Delete
-                                    </a>";
-                                    
-            if ($row['S_qrStatus'] === 'Generated') {
-                echo "<button type='button' 
-                             class='btn btn-info btn-sm' 
-                             onclick='showQRCode(\"{$qrPath}\", \"{$row['E_name']}\", \"$slotDate\", \"$startTime\", \"$endTime\", \"$slotLocation\", \"{$row['S_slotID']}\")'>
-                        <i class='bi bi-qr-code'></i> View QR
-                      </button>";
-            } else {
-                echo "<a href='generate_qr.php?slot_id={$row['S_slotID']}' class='btn btn-secondary btn-sm'>
-                        <i class='bi bi-qr-code'></i> Generate QR
-                      </a>";
-            }
-
-            echo "          </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
-                </div>";
+                </div>
+            </div>
+            <?php
         }
     } else {
         echo "<div class='alert alert-info'>No attendance slots have been created yet.</div>";
@@ -209,5 +194,8 @@ function copyUrl(url) {
     alert('URL copied to clipboard!');
 }
 </script>
+
+<?php include('includes/footer.php'); ?>
+
 </body>
 </html>

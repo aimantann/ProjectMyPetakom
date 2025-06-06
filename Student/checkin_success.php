@@ -1,9 +1,9 @@
 <?php
-include '../includes/dbconnection.php';
 session_start();
+require_once('includes/dbconnection.php');
 
 if (!isset($_GET['slot'])) {
-    header("Location: index.php");
+    header("Location: student-dashboard.php");
     exit();
 }
 
@@ -21,7 +21,7 @@ $result = $stmt->get_result();
 $eventData = $result->fetch_assoc();
 
 if (!$eventData) {
-    header("Location: index.php");
+    header("Location: student-dashboard.php");
     exit();
 }
 ?>
@@ -68,11 +68,6 @@ if (!$eventData) {
             gap: 8px;
             transition: all 0.3s ease;
         }
-        .location-btn:hover {
-            background-color: #0b5ed7;
-            color: white;
-            transform: translateY(-2px);
-        }
         .success-icon {
             font-size: 48px;
             color: white;
@@ -83,20 +78,6 @@ if (!$eventData) {
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 15px;
-        }
-        .info-label {
-            font-weight: 600;
-            color: #6c757d;
-            margin-bottom: 5px;
-        }
-        .info-value {
-            font-size: 1.1rem;
-            color: #212529;
-        }
-        @media (max-width: 768px) {
-            .success-card {
-                margin: 10px;
-            }
         }
     </style>
 </head>
@@ -140,6 +121,12 @@ if (!$eventData) {
                 <a href="<?= $mapsUrl ?>" target="_blank" class="location-btn">
                     <i class="bi bi-geo-alt-fill"></i>
                     Get Directions
+                </a>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="student-dashboard.php" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left"></i> Back to Dashboard
                 </a>
             </div>
         </div>

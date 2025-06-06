@@ -1,34 +1,11 @@
 <?php
-include 'db.php';
-
-// Set current user and datetime
-$currentDateTime = "2025-05-31 12:52:16";
-$currentUser = "AthirahSN";
+session_start();
+require_once('includes/dbconnection.php');
 
 // Initialize variables
 $error_message = '';
 $success_message = '';
 $slot = null;
-
-// Fetch slot data if ID is provided
-if (isset($_GET['id'])) {
-    $id = $_GET['id'];
-    
-    $stmt = $conn->prepare("SELECT * FROM attendanceslot WHERE S_slotID = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows > 0) {
-        $slot = $result->fetch_assoc();
-        // Log access
-        error_log("[$currentDateTime] User $currentUser accessed edit_slot.php for slot ID: $id");
-    } else {
-        $error_message = "Slot not found.";
-        error_log("[$currentDateTime] Error: User $currentUser attempted to edit non-existent slot ID: $id");
-    }
-    $stmt->close();
-}
 
 // Process form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -64,19 +41,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         );
 
         if ($stmt->execute()) {
-            // Log successful update
-            error_log("[$currentDateTime] User $currentUser successfully updated slot ID: $slot_id");
+            $_SESSION['success_message'] = "Attendance slot updated successfully!";
             header("Location: view_attendanceslot.php?success=2");
             exit();
         } else {
             $error_message = "Error updating record: " . $conn->error;
-            error_log("[$currentDateTime] Error: User $currentUser failed to update slot ID: $slot_id - " . $conn->error);
         }
         $stmt->close();
     }
 }
-?>
 
+// Fetch slot data if ID is provided
+if (isset($_GET['id'])) {
+    $id = $_GET['id'];
+    
+    $stmt = $conn->prepare("SELECT * FROM attendanceslot WHERE S_slotID = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $slot = $result->fetch_assoc();
+    } else {
+        $error_message = "Slot not found.";
+    }
+    $stmt->close();
+}
+
+// Now include header and start HTML output
+require_once('includes/header.php');
+?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -87,10 +81,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             max-width: 800px;
             margin: 0 auto;
         }
-        .datetime-info {
-            font-size: 0.8rem;
-            color: #6c757d;
-        }
     </style>
 </head>
 <body class="bg-light">
@@ -99,9 +89,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <div class="form-container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2>Edit Attendance Slot</h2>
-            <div class="datetime-info">
-                Last Updated: <?php echo $currentDateTime; ?> UTC
-            </div>
         </div>
 
         <?php if ($error_message): ?>
@@ -202,6 +189,8 @@ document.querySelector('form').addEventListener('submit', function(e) {
     }
 });
 </script>
+
+<?php include('includes/footer.php'); ?>
 
 </body>
 </html>

@@ -1,9 +1,7 @@
 <?php
-include 'includes/dbconnection.php';
-
-// Set current user and datetime
-$currentDateTime = date('Y-m-d H:i:s');
-$currentUser = "AthirahSN";
+session_start();
+require_once('includes/dbconnection.php');
+require_once('includes/header.php');
 
 // Get all active events with their QR codes
 $query = "SELECT e.*, a.S_qrCode, a.S_slotID, a.S_qrStatus, a.S_startTime, a.S_endTime, a.S_Date, a.S_Location 
@@ -14,21 +12,14 @@ $query = "SELECT e.*, a.S_qrCode, a.S_slotID, a.S_qrStatus, a.S_startTime, a.S_e
 
 $result = $conn->query($query);
 
-// Function to get QR code path
+// Function to get QR code path - Updated with correct path
 function getQRCodePath($slotId) {
-    // Using the absolute path from your project root
-    $qrPath = "../Event Advisor/Module3/qr_codes/slot_" . $slotId . ".png";
-    
-    // For debugging
-    error_log("Trying to access QR code at: " . $qrPath);
-    error_log("File exists: " . (file_exists($qrPath) ? "Yes" : "No"));
-    
-    return $qrPath;
+    return "../Event Advisor/qr_codes/slot_" . $slotId . ".png";
 }
 
 // Function to check if QR code exists
 function qrCodeExists($slotId) {
-    $qrPath = "../Event Advisor/Module3/qr_codes/slot_" . $slotId . ".png";
+    $qrPath = "../Event Advisor/qr_codes/slot_" . $slotId . ".png";
     return file_exists($qrPath);
 }
 ?>
@@ -38,6 +29,7 @@ function qrCodeExists($slotId) {
 <head>
     <title>Available Events</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
         .event-card {
             transition: all 0.3s ease;
@@ -58,6 +50,17 @@ function qrCodeExists($slotId) {
         .event-details {
             margin-bottom: 15px;
         }
+        .qr-actions {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-download {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -65,17 +68,12 @@ function qrCodeExists($slotId) {
 <div class="container mt-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Available Events</h2>
-        <div class="text-muted">
-            <small>Last Updated: <?php echo $currentDateTime; ?> UTC</small>
-        </div>
     </div>
 
-    <!-- Back to Dashboard Button -->
     <div class="mb-4">
         <a href="student-dashboard.php" class="btn btn-outline-primary">← Back to Dashboard</a>
     </div>
 
-    <!-- Event List -->
     <div class="row justify-content-center">
         <div class="col-md-8">
             <?php 
@@ -91,26 +89,37 @@ function qrCodeExists($slotId) {
                             <p class="card-text">
                                 <strong>Description:</strong> <?php echo htmlspecialchars($row['E_description']); ?><br>
                                 <strong>Location:</strong> <?php echo htmlspecialchars($row['S_Location']); ?><br>
-                                <strong>Date:</strong> <?php echo $row['S_Date']; ?><br>
-                                <strong>Time:</strong> <?php echo date('h:i A', strtotime($row['S_startTime'])) . ' - ' . date('h:i A', strtotime($row['S_endTime'])); ?>
+                                <strong>Date:</strong> <?php echo date('F j, Y', strtotime($row['S_Date'])); ?><br>
+                                <strong>Time:</strong> <?php echo date('h:i A', strtotime($row['S_startTime'])) . ' - ' . 
+                                                           date('h:i A', strtotime($row['S_endTime'])); ?>
                             </p>
                         </div>
 
-                        <!-- QR Code Display -->
                         <div class="text-center">
                             <?php if ($hasQRCode): ?>
                                 <img src="<?php echo $qrCodePath; ?>" 
                                      class="qr-code-img" 
                                      alt="QR Code for <?php echo htmlspecialchars($row['E_name']); ?>"
-                                     onerror="this.onerror=null; this.src='placeholder-qr.png';">
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                
+                                <div class="qr-actions">
+                                    <a href="<?php echo $qrCodePath; ?>" 
+                                       class="btn btn-primary btn-download" 
+                                       download="event_<?php echo $row['S_slotID']; ?>_qr.png">
+                                        <i class="bi bi-download"></i> Download QR Code
+                                    </a>
+                                    <a href="view_qr.php?id=<?php echo $row['S_slotID']; ?>" 
+                                       class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrows-fullscreen"></i> View Full Size
+                                    </a>
+                                </div>
+                                
+                                <div class="mt-2">
+                                    <small class="text-muted">Scan QR code to check in</small>
+                                </div>
                             <?php else: ?>
                                 <div class="alert alert-info">
-                                    <strong>Slot ID:</strong> <?php echo $row['S_slotID']; ?><br>
-                                    <?php if ($row['S_slotID'] <= 8): ?>
-                                        Please generate QR code for this slot.
-                                    <?php else: ?>
-                                        Looking for QR code at: <?php echo htmlspecialchars($qrCodePath); ?>
-                                    <?php endif; ?>
+                                    <p class="mb-0">QR code not available for this event.</p>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -126,28 +135,6 @@ function qrCodeExists($slotId) {
     </div>
 </div>
 
-<?php if (isset($_GET['debug'])): ?>
-<div class="container mt-3">
-    <div class="alert alert-secondary">
-        <h5>Debug Information</h5>
-        <pre>
-Script Location: <?php echo __FILE__; ?>
-Document Root: <?php echo $_SERVER['DOCUMENT_ROOT']; ?>
-QR Codes Directory: <?php echo realpath("../Event Advisor/Module3/qr_codes/"); ?>
-Available QR Codes: 
-<?php 
-$qrDir = "../Event Advisor/Module3/qr_codes/";
-if (is_dir($qrDir)) {
-    $files = scandir($qrDir);
-    echo implode("\n", array_filter($files, function($f) { return strpos($f, 'slot_') === 0; }));
-} else {
-    echo "Directory not found: $qrDir";
-}
-?>
-        </pre>
-    </div>
-</div>
-<?php endif; ?>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
