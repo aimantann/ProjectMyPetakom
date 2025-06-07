@@ -11,106 +11,108 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
     exit();
 }
 
-// Get the current user's ID from session
-$user_id = $_SESSION['user_id'];
-
-// Merit points calculation based on event level and role
-function calculateMeritPoints($eventLevel, $role) {
-    $meritTable = [
-        'International' => [
-            'Main Committee' => 100,
-            'Committee' => 70,
-            'Participant' => 50
-        ],
-        'National' => [
-            'Main Committee' => 80,
-            'Committee' => 50,
-            'Participant' => 40
-        ],
-        'State' => [
-            'Main Committee' => 60,
-            'Committee' => 40,
-            'Participant' => 30
-        ],
-        'District' => [
-            'Main Committee' => 40,
-            'Committee' => 30,
-            'Participant' => 15
-        ],
-        'UMPSA' => [
-            'Main Committee' => 30,
-            'Committee' => 20,
-            'Participant' => 5
-        ]
-    ];
-
-    return isset($meritTable[$eventLevel][$role]) ? $meritTable[$eventLevel][$role] : 0;
-}
-
-// Get user's merit data with event details
+// Get user's merit data for current semester (Semester 3)
 $query = "SELECT 
     e.E_name as event_name,
     e.E_level as event_level,
     mc.MC_role as role,
-    ma.MD_totalMerit as merit_awarded,
-    mc.MC_submitDate as date_awarded
-FROM meritawarded ma
-JOIN event e ON ma.E_eventID = e.E_eventID
-JOIN meritclaim mc ON ma.E_eventID = mc.E_eventID AND ma.U_userID = mc.U_userID
-WHERE ma.U_userID = ?
-ORDER BY mc.MC_submitDate DESC";
+    md.MD_meritPoint as merit_awarded,
+    md.MD_awardedDate as date_awarded
+FROM meritawarded md
+JOIN event e ON md.E_eventID = e.E_eventID
+JOIN meritclaim mc ON md.E_eventID = mc.E_eventID 
+    AND md.U_userID = mc.U_userID
+WHERE md.U_userID = ? 
+    AND mc.MC_claimStatus = 'Approved'
+ORDER BY md.MD_awardedDate DESC";
+
+// Add dummy data for previous semesters
+$dummy_semester_data = [
+    'Semester 1 2024' => [
+        [
+            'event_name' => 'Programming Competition',
+            'event_level' => 'National',
+            'role' => 'Main Committee',
+            'merit_awarded' => 80,
+            'date_awarded' => '2024-11-15'
+        ],
+        [
+            'event_name' => 'Tech Workshop Series',
+            'event_level' => 'UMPSA',
+            'role' => 'Committee',
+            'merit_awarded' => 20,
+            'date_awarded' => '2024-10-20'
+        ],
+        [
+            'event_name' => 'Cyber Security Seminar',
+            'event_level' => 'State',
+            'role' => 'Participant',
+            'merit_awarded' => 30,
+            'date_awarded' => '2024-09-05'
+        ]
+    ],
+    'Semester 2 2024' => [
+        [
+            'event_name' => 'IT Career Fair',
+            'event_level' => 'District',
+            'role' => 'Main Committee',
+            'merit_awarded' => 40,
+            'date_awarded' => '2025-03-20'
+        ],
+        [
+            'event_name' => 'Database Management Workshop',
+            'event_level' => 'UMPSA',
+            'role' => 'Committee',
+            'merit_awarded' => 20,
+            'date_awarded' => '2025-02-15'
+        ]
+    ]
+];
+
+// Calculate dummy semester totals
+$dummy_semester_totals = [
+    'Semester 1 2024' => 130, // 80 + 20 + 30
+    'Semester 2 2024' => 60   // 40 + 20
+];
 
 try {
-    // Prepare and execute the query
+    // Get current semester (Semester 3) data
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("i", $_SESSION['U_userID']);
+    $stmt->bind_param("i", $_SESSION['user_id']);
     $stmt->execute();
     $result = $stmt->get_result();
 
-    // Fetch all merit records
-    $merits = [];
+    // Initialize the merits array with dummy data
+    $merits_by_semester = $dummy_semester_data;
+    
+    // Add current semester (Semester 3) data
+    $current_semester = 'Semester 3 2025';
+    $merits_by_semester[$current_semester] = [];
+    $semester_totals = $dummy_semester_totals;
+    $semester_totals[$current_semester] = 0;
+
+    // Process current semester data from database
     while ($row = $result->fetch_assoc()) {
-        $merits[] = [
+        $merits_by_semester[$current_semester][] = [
             'event_name' => $row['event_name'],
             'event_level' => $row['event_level'],
             'role' => $row['role'],
             'merit_awarded' => $row['merit_awarded'],
-            'date_awarded' => $row['date_awarded'],
-            'calculated_merit' => calculateMeritPoints($row['event_level'], $row['role'])
+            'date_awarded' => $row['date_awarded']
         ];
+        // Add to semester total
+        $semester_totals[$current_semester] += $row['merit_awarded'];
     }
 
-    // Calculate total merits
-    $total_query = "SELECT COALESCE(SUM(MD_totalMerit), 0) as total 
-                    FROM meritawarded 
-                    WHERE U_userID = ?";
-    $total_stmt = $conn->prepare($total_query);
-    $total_stmt->bind_param("i", $_SESSION['U_userID']);
-    $total_stmt->execute();
-    $total_result = $total_stmt->get_result();
-    $total_row = $total_result->fetch_assoc();
-    $total_merits = $total_row['total'];
+    // Calculate overall total including dummy data
+    $total_merits = array_sum($semester_totals);
 
-    // Close statements
+    // Close statement
     $stmt->close();
-    $total_stmt->close();
 
 } catch (Exception $e) {
     $error_message = "Error retrieving merit data: " . $e->getMessage();
 }
-
-// Merit points reference table data
-$meritTableData = [
-    'headers' => ['Event Level', 'Main Committee', 'Committee', 'Participant'],
-    'rows' => [
-        ['International', 100, 70, 50],
-        ['National', 80, 50, 40],
-        ['State', 60, 40, 30],
-        ['District', 40, 30, 15],
-        ['UMPSA', 30, 20, 5]
-    ]
-];
-
 ?>
 
 <!DOCTYPE html>
@@ -119,6 +121,7 @@ $meritTableData = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View Merit - MyPetakom</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -183,10 +186,17 @@ $meritTableData = [
             margin-bottom: 30px;
         }
 
+        .semester-section {
+            margin-bottom: 30px;
+        }
+
         .table-header {
             background-color: #f8f9fa;
             padding: 20px;
             border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .table-title {
@@ -218,7 +228,6 @@ $meritTableData = [
 
         .merit-table tbody tr:hover {
             background-color: #f8f9fa;
-            transition: background-color 0.3s;
         }
 
         .role-badge {
@@ -257,93 +266,87 @@ $meritTableData = [
             font-size: 18px;
         }
 
-        .error-message {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid #f5c6cb;
-            border-radius: 10px;
-        }
+        .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
 
-        /* Merit Points Reference Table styles */
-        .merit-points-table {
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            margin-top: 30px;
-        }
+.btn-generate-qr {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+}
 
-        .merit-points-table table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+.btn-generate-qr:hover {
+    background-color: #0056b3;
+}
 
-        .merit-points-table th,
-        .merit-points-table td {
-            padding: 12px;
-            text-align: center;
-            border: 1px solid #dee2e6;
-        }
+.popup {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
 
-        .merit-points-table th {
-            background-color: #343a40;
-            color: white;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 12px;
-            letter-spacing: 0.5px;
-        }
+.popup-content {
+    position: relative;
+    background-color: white;
+    margin: 15% auto;
+    padding: 20px;
+    width: 300px;
+    border-radius: 10px;
+    text-align: center;
+}
 
-        .merit-points-table tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
+.close {
+    position: absolute;
+    right: 10px;
+    top: 5px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
 
-        .merit-points-table td:first-child {
-            font-weight: 600;
-            text-align: left;
-        }
+.close:hover {
+    color: #333;
+}
 
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
             }
 
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .merit-table,
-            .merit-points-table {
-                font-size: 14px;
-            }
-
             .merit-table th,
-            .merit-table td,
-            .merit-points-table th,
-            .merit-points-table td {
+            .merit-table td {
                 padding: 10px 8px;
-            }
-
-            .total-merits {
-                font-size: 28px;
-            }
-
-            .role-badge {
-                padding: 3px 8px;
-                font-size: 11px;
+                font-size: 14px;
             }
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
         <!-- Header with Title -->
         <div class="header">
-            <h1 class="page-title">View Merit</h1>
+            <div class="header-content">
+                <h1 class="page-title">View Merit</h1>
+                <button id="generateQRBtn" class="btn-generate-qr">
+                    <i class="fas fa-qrcode"></i> Generate QR
+                </button>
+            </div>
         </div>
 
         <?php if (isset($error_message)): ?>
@@ -356,45 +359,53 @@ $meritTableData = [
         <!-- Merit Summary -->
         <div class="merit-summary">
             <div class="total-merits"><?php echo $total_merits; ?></div>
-            <div class="merit-label">Total Merit Points Earned</div>
+            <div class="merit-label">Total Cumulative Merit Points</div>
         </div>
 
         <!-- Merit History Table -->
         <div class="merit-table-container">
-            <div class="table-header">
-                <h2 class="table-title">Merit History</h2>
-            </div>
-
-            <?php if (!empty($merits)): ?>
-                <table class="merit-table">
-                    <thead>
-                        <tr>
-                            <th>Event Name</th>
-                            <th>Level</th>
-                            <th>Role</th>
-                            <th>Merit Points</th>
-                            <th>Date Awarded</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($merits as $merit): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($merit['event_name']); ?></td>
-                                <td><?php echo htmlspecialchars($merit['event_level']); ?></td>
-                                <td>
-                                    <span class="role-badge <?php 
-                                        echo $merit['role'] === 'Main Committee' ? 'role-main' : 
-                                             ($merit['role'] === 'Committee' ? 'role-committee' : 'role-participant'); 
-                                    ?>">
-                                        <?php echo htmlspecialchars($merit['role']); ?>
-                                    </span>
-                                </td>
-                                <td class="merit-points"><?php echo $merit['merit_awarded']; ?></td>
-                                <td><?php echo date('d M Y', strtotime($merit['date_awarded'])); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <?php if (!empty($merits_by_semester)): ?>
+                <?php 
+                // Display semesters in reverse chronological order
+                krsort($merits_by_semester);
+                foreach ($merits_by_semester as $semester => $semester_merits): 
+                ?>
+                    <div class="semester-section">
+                        <div class="table-header">
+                            <h2 class="table-title"><?php echo htmlspecialchars($semester); ?></h2>
+                            <div class="semester-total">Total: <?php echo $semester_totals[$semester]; ?> points</div>
+                        </div>
+                        <table class="merit-table">
+                            <thead>
+                                <tr>
+                                    <th>Event Name</th>
+                                    <th>Level</th>
+                                    <th>Role</th>
+                                    <th>Merit Points</th>
+                                    <th>Date Awarded</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($semester_merits as $merit): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($merit['event_name']); ?></td>
+                                        <td><?php echo htmlspecialchars($merit['event_level']); ?></td>
+                                        <td>
+                                            <span class="role-badge <?php 
+                                                echo $merit['role'] === 'Main Committee' ? 'role-main' : 
+                                                     ($merit['role'] === 'Committee' ? 'role-committee' : 'role-participant'); 
+                                            ?>">
+                                                <?php echo htmlspecialchars($merit['role']); ?>
+                                            </span>
+                                        </td>
+                                        <td class="merit-points"><?php echo $merit['merit_awarded']; ?></td>
+                                        <td><?php echo date('d M Y', strtotime($merit['date_awarded'])); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endforeach; ?>
             <?php else: ?>
                 <div class="no-merits">
                     <i class="fas fa-trophy" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i>
@@ -402,56 +413,14 @@ $meritTableData = [
                 </div>
             <?php endif; ?>
         </div>
-
-        <!-- Merit Points Reference Table -->
-        <div class="merit-points-table">
-            <div class="table-header">
-                <h2 class="table-title">Merit Points Reference Table</h2>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Event Level</th>
-                        <th>Main Committee</th>
-                        <th>Committee</th>
-                        <th>Participant</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>International</td>
-                        <td>100</td>
-                        <td>70</td>
-                        <td>50</td>
-                    </tr>
-                    <tr>
-                        <td>National</td>
-                        <td>80</td>
-                        <td>50</td>
-                        <td>40</td>
-                    </tr>
-                    <tr>
-                        <td>State</td>
-                        <td>60</td>
-                        <td>40</td>
-                        <td>30</td>
-                    </tr>
-                    <tr>
-                        <td>District</td>
-                        <td>40</td>
-                        <td>30</td>
-                        <td>15</td>
-                    </tr>
-                    <tr>
-                        <td>UMPSA</td>
-                        <td>30</td>
-                        <td>20</td>
-                        <td>5</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
     </div>
-<?php include('includes/footer.php'); ?>
+
+    <script>
+    document.getElementById('generateQRBtn').addEventListener('click', function() {
+        window.open('generate-qr.php', 'QR Code', 'width=400,height=400');
+    });
+    </script>
+
+    <?php include('includes/footer.php'); ?>
 </body>
 </html>

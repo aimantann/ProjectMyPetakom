@@ -4,6 +4,36 @@ date_default_timezone_set('Asia/Kuala_Lumpur');
 include('includes/header.php');
 include("includes/dbconnection.php");
 
+if (isset($_POST['action']) && isset($_POST['claim_id'])) {
+    $action = $_POST['action'];
+    $claim_id = $_POST['claim_id'];
+
+    if ($action === 'submit_claim') {
+        // Update claim status to Submitted
+        $update_query = "UPDATE meritclaim SET MC_claimStatus = 'Submitted' WHERE MC_claimID = ? AND U_userID = ?";
+        $stmt = $conn->prepare($update_query);
+        $stmt->bind_param("ii", $claim_id, $_SESSION['user_id']);
+        
+        if ($stmt->execute()) {
+            $_SESSION['success_message'] = "Claim has been submitted successfully for review!";
+            echo "<script>
+                window.location.href = 'student-my-merit-claims.php';
+            </script>";
+            exit();
+        } else {
+            $error_message = "Error submitting claim. Please try again.";
+        }
+        $stmt->close();
+    }
+}
+
+// Display success message if claim was saved
+$success_message = '';
+if (isset($_SESSION['claim_saved'])) {
+    $success_message = $_SESSION['claim_saved'];
+    unset($_SESSION['claim_saved']); // Clear the message after displaying
+}
+
 // Check if user is logged in and is a student
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
     $_SESSION['login_required'] = "Please login as a student to access this page.";
@@ -19,7 +49,7 @@ $query = "SELECT
     mc.MC_claimStatus,
     mc.MC_submitDate,
     mc.MC_documentPath,
-    COALESCE(ma.MD_totalMerit, 0) as merit_awarded
+    COALESCE(ma.MD_meritPoint, 0) as merit_awarded
 FROM meritclaim mc
 LEFT JOIN event e ON mc.E_eventID = e.E_eventID
 LEFT JOIN meritawarded ma ON mc.E_eventID = ma.E_eventID AND mc.U_userID = ma.U_userID
@@ -203,6 +233,11 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
             color: white;
         }
 
+        .status-submitted {
+            background-color: #17a2b8;
+            color: white;
+        }
+
         .role-badge {
             padding: 5px 12px;
             border-radius: 20px;
@@ -266,6 +301,22 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
 
         .btn-delete:hover {
             background-color: #c82333;
+            transform: translateY(-1px);
+        }
+
+        .btn-submit {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .btn-submit:hover {
+            background-color: #218838;
             transform: translateY(-1px);
         }
 
@@ -556,7 +607,8 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
                                 <td>
                                     <span class="status-badge <?php 
                                         echo strtolower($row['MC_claimStatus']) === 'pending' ? 'status-pending' : 
-                                             (strtolower($row['MC_claimStatus']) === 'approved' ? 'status-approved' : 'status-rejected'); 
+                                            (strtolower($row['MC_claimStatus']) === 'submitted' ? 'status-submitted' : 
+                                            (strtolower($row['MC_claimStatus']) === 'approved' ? 'status-approved' : 'status-rejected')); 
                                     ?>">
                                         <?php echo htmlspecialchars($row['MC_claimStatus']); ?>
                                     </span>
@@ -578,14 +630,22 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
                                 </td>
                                 <td>
                                     <div class="action-buttons">
-                                        <button class="btn-edit" 
-                                                onclick="editClaim(<?php echo $row['MC_claimID']; ?>)"
-                                                <?php echo strtolower($row['MC_claimStatus']) !== 'submitted' ? '' : 'disabled title="Cannot edit submitted claims"'; ?>>
-                                            <i class="fas fa-edit"></i> Edit
-                                        </button>
-                                        <button class="btn-delete" onclick="deleteClaim(<?php echo $row['MC_claimID']; ?>)">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </button>
+                                        <?php if (strtolower($row['MC_claimStatus']) === 'pending'): ?>
+                                            <button class="btn-edit" 
+                                                    onclick="editClaim(<?php echo $row['MC_claimID']; ?>)">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </button>
+                                            <button class="btn-delete" 
+                                                    onclick="deleteClaim(<?php echo $row['MC_claimID']; ?>)">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                            <button class="btn-submit" 
+                                                    onclick="submitClaim(<?php echo $row['MC_claimID']; ?>)">
+                                                <i class="fas fa-paper-plane"></i> Submit
+                                            </button>
+                                        <?php else: ?>
+                                            <span class="text-muted">No actions available</span>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
@@ -736,6 +796,29 @@ if (isset($_GET['success']) && $_GET['success'] == 1) {
                     console.error('Error:', error);
                     alert('Error deleting claim');
                 });
+            }
+        }
+
+        function submitClaim(id) {
+            if (confirm('Are you sure you want to submit this claim for review? You won\'t be able to edit or delete it after submission.')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.style.display = 'none';
+
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'action';
+                actionInput.value = 'submit_claim';
+
+                const claimIdInput = document.createElement('input');
+                claimIdInput.type = 'hidden';
+                claimIdInput.name = 'claim_id';
+                claimIdInput.value = id;
+
+                form.appendChild(actionInput);
+                form.appendChild(claimIdInput);
+                document.body.appendChild(form);
+                form.submit();
             }
         }
 

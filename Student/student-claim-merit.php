@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Insert into database if no errors
     if (!isset($error_message)) {
         $submit_date = date('Y-m-d H:i:s');
-        $claim_status = 'Pending';
+        $claim_status = 'Pending'; // Status will be Pending when saved
         
         // Check if claim already exists
         $check_query = "SELECT MC_claimID FROM meritclaim 
@@ -66,10 +66,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $stmt->bind_param("iissss", $event_id, $user_id, $role, $file_path, $submit_date, $claim_status);
             
             if ($stmt->execute()) {
+                // Redirect to student-my-merit-claims.php with success message
+                $_SESSION['claim_saved'] = "Claim has been saved successfully!";
                 echo "<script>
-                    window.location.href = 'student-my-merit-claims.php?success=1';
+                    window.location.href = 'student-my-merit-claims.php';
                 </script>";
                 exit();
+            } else {
+                $error_message = "Error saving claim. Please try again.";
             }
             
             $stmt->close();
@@ -272,8 +276,8 @@ $conn->close();
                     <!-- Submit Button -->
                     <div class="text-end">
                         <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-paper-plane me-2"></i>
-                            Submit Claim for Approval
+                            <i class="fas fa-save me-2"></i>
+                            Save Claim
                         </button>
                     </div>
                 </form>
