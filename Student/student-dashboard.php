@@ -1,135 +1,380 @@
 <?php
-session_start(); // Start the session
-
-// Prevent page caching to avoid back button issues
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Cache-Control: post-check=0, pre-check=0", false);
-header("Pragma: no-cache");
-header("Expires: Fri, 01 Jan 1990 00:00:00 GMT");
-
-// Check if the user is logged in
-if (!isset($_SESSION['user_logged_in']) || $_SESSION['user_logged_in'] !== true) {
-    // Set a session message about needing to login again
-    $_SESSION['login_required'] = "Your session has expired. Please login again to view the dashboard.";
-    header("Location: ../Admin/user-login.php"); // Redirect to login if not logged in
-    exit;
-}
-
-// Additional security check - validate user's session token
-if (!isset($_SESSION['session_token']) || empty($_SESSION['session_token'])) {
-    // If token is missing but user is supposedly logged in, this might be a session issue
-    session_start();
-    $_SESSION['login_required'] = "For security reasons, please login again to continue.";
-    header("Location: ../Admin/user-login.php");
-    exit;
-}
-
-// Check if the user has the correct role
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'student') {
-    session_start();
-    $_SESSION['login_required'] = "You don't have permission to access this page.";
-    header("Location: ../Admin/user-login.php");
-    exit;
-}
-
-// Session timeout check (30 minutes of inactivity)
-$timeout = 1800; // 30 minutes in seconds
-if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeout)) {
-    // Session has expired
-    $_SESSION = array();
-    if (isset($_COOKIE[session_name()])) {
-        setcookie(session_name(), '', time() - 42000, '/');
-    }
-    session_destroy();
-    
-    session_start();
-    $_SESSION['login_required'] = "Your session has expired due to inactivity. Please login again.";
-    header("Location: ../Student/user-login.php");
-    exit;
-}
-
-// Update last activity time
-$_SESSION['last_activity'] = time();
-
-// Include header file
+session_start();
 include('includes/header.php');
-
-// Include database connection file
 include('includes/dbconnection.php');
 
-// --- ADDED: Fetch logged-in student's name ---
-$user_name = '';
-if (isset($_SESSION['email'])) {
-    $user_email = $_SESSION['email'];
-    $query = "SELECT U_name FROM user WHERE U_email = ? LIMIT 1";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param('s', $user_email);
-    $stmt->execute();
-    $stmt->bind_result($db_name);
-    if ($stmt->fetch()) {
-        $user_name = $db_name;
-    }
-    $stmt->close();
+// Security checks
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
+    $_SESSION['login_required'] = "Please login as a student to access this page.";
+    header('Location: user-login.php');
+    exit();
 }
 
+// Dummy data for previous semesters
+$dummy_data = [
+    'Semester 1 2024' => [
+        'total_merit' => 130,
+        'event_count' => 3,
+        'roles' => [
+            'Main Committee' => 1,
+            'Committee' => 1,
+            'Participant' => 1
+        ],
+        'levels' => [
+            'National' => 1,
+            'UMPSA' => 1,
+            'State' => 1
+        ]
+    ],
+    'Semester 2 2024' => [
+        'total_merit' => 60,
+        'event_count' => 2,
+        'roles' => [
+            'Main Committee' => 1,
+            'Committee' => 1
+        ],
+        'levels' => [
+            'District' => 1,
+            'UMPSA' => 1
+        ]
+    ]
+];
+
+// Available semesters (including dummy and current)
+$available_semesters = ['Semester 1 2024', 'Semester 2 2024', 'Semester 3 2025'];
+
+// Get selected semester or default to current
+$selected_semester = isset($_POST['semester']) ? $_POST['semester'] : 'Semester 3 2025';
+
+// Get data for selected semester
+if ($selected_semester === 'Semester 3 2025') {
+    // Use real data for current semester
+    $merit_query = "SELECT 
+        SUM(md.MD_meritPoint) as total_merit,
+        COUNT(*) as event_count
+    FROM meritawarded md
+    WHERE md.U_userID = ? 
+    AND MONTH(md.MD_awardedDate) BETWEEN 5 AND 8
+    AND YEAR(md.MD_awardedDate) = 2025";
+
+    $stmt = $conn->prepare($merit_query);
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    $merit_result = $stmt->get_result();
+    $merit_data = $merit_result->fetch_assoc();
+
+    // Get real role distribution
+    $role_query = "SELECT 
+        mc.MC_role as role,
+        COUNT(*) as count
+    FROM meritclaim mc
+    JOIN meritawarded md ON mc.E_eventID = md.E_eventID AND mc.U_userID = md.U_userID
+    WHERE mc.U_userID = ? 
+    AND mc.MC_claimStatus = 'Approved'
+    AND MONTH(md.MD_awardedDate) BETWEEN 5 AND 8
+    AND YEAR(md.MD_awardedDate) = 2025
+    GROUP BY mc.MC_role";
+
+    $stmt = $conn->prepare($role_query);
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    $role_result = $stmt->get_result();
+    $role_data = [];
+    $role_labels = [];
+    while ($row = $role_result->fetch_assoc()) {
+        $role_labels[] = $row['role'];
+        $role_data[] = $row['count'];
+    }
+
+    // Get real event level distribution
+    $level_query = "SELECT 
+        e.E_level as level,
+        COUNT(*) as count
+    FROM meritclaim mc
+    JOIN event e ON mc.E_eventID = e.E_eventID
+    JOIN meritawarded md ON mc.E_eventID = md.E_eventID AND mc.U_userID = md.U_userID
+    WHERE mc.U_userID = ? 
+    AND mc.MC_claimStatus = 'Approved'
+    AND MONTH(md.MD_awardedDate) BETWEEN 5 AND 8
+    AND YEAR(md.MD_awardedDate) = 2025
+    GROUP BY e.E_level";
+
+    $stmt = $conn->prepare($level_query);
+    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->execute();
+    $level_result = $stmt->get_result();
+    $level_labels = [];
+    $level_data = [];
+    while ($row = $level_result->fetch_assoc()) {
+        $level_labels[] = $row['level'];
+        $level_data[] = $row['count'];
+    }
+} else {
+    // Use dummy data for previous semesters
+    $semester_data = $dummy_data[$selected_semester];
+    $merit_data = [
+        'total_merit' => $semester_data['total_merit'],
+        'event_count' => $semester_data['event_count']
+    ];
+    
+    $role_labels = array_keys($semester_data['roles']);
+    $role_data = array_values($semester_data['roles']);
+    
+    $level_labels = array_keys($semester_data['levels']);
+    $level_data = array_values($semester_data['levels']);
+}
 ?>
 
-<!-- Add meta tags to prevent back button navigation after logout -->
-<meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="pragma" content="no-cache">
-<meta http-equiv="expires" content="0">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - MyPetakom</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<!-- Dashboard content container -->
-<div class="container-fluid">
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            padding: 10px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .dashboard-title {
+            font-size: 20px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .semester-select {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            min-width: 150px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .charts-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .chart-box {
+            flex: 1;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 200px !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">Student Dashboard</h1>
+            <form method="post" id="semesterForm">
+                <select name="semester" class="semester-select" onchange="this.form.submit()">
+                    <?php foreach ($available_semesters as $semester): ?>
+                        <option value="<?php echo $semester; ?>" <?php echo ($semester === $selected_semester) ? 'selected' : ''; ?>>
+                            <?php echo $semester; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value"><?php echo isset($merit_data['total_merit']) ? $merit_data['total_merit'] : 0; ?></div>
+                <div class="stat-label">Total Merit Points</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"><?php echo isset($merit_data['event_count']) ? $merit_data['event_count'] : 0; ?></div>
+                <div class="stat-label">Events Participated</div>
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <div class="chart-box">
+                <div class="chart-title">Merit Points Distribution</div>
+                <canvas id="meritChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <div class="chart-title">Participation by Role</div>
+                <canvas id="roleChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <div class="chart-title">Events by Level</div>
+                <canvas id="levelChart"></canvas>
+            </div>
+        </div>
     </div>
-    
-    <!-- Dashboard content goes here -->
-</div>
 
-<!-- Add JavaScript to handle back button detection -->
-<script type="text/javascript">
-    // When page loads
-    window.onload = function() {
-        // When navigating to this page
-        window.addEventListener('pageshow', function(event) {
-            // If navigated via browser cache/history (like back button)
-            if (event.persisted || performance.navigation.type === 2) {
-                // Redirect to validation script
-                window.location.href = "user-validatesession.php";
+    <script>
+        new Chart(document.getElementById('meritChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Merit Points'],
+                datasets: [{
+                    data: [<?php echo isset($merit_data['total_merit']) ? $merit_data['total_merit'] : 0; ?>],
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
             }
         });
-    };
-    
-    // Additional history manipulation for better back button handling
-    if (window.history && window.history.pushState) {
-        window.history.pushState(null, "", window.location.href);
-        window.onpopstate = function() {
-            window.location.href = "user-validatesession.php";
-        };
-    }
-</script>
 
-<?php
-// Close the database connection
-$conn->close();
+        new Chart(document.getElementById('roleChart'), {
+            type: 'pie',
+            data: {
+                labels: <?php echo json_encode($role_labels ?? []); ?>,
+                datasets: [{
+                    data: <?php echo json_encode($role_data ?? []); ?>,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 206, 86, 0.7)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
-// Include footer and scripts
-include('includes/footer.php');
-include('includes/scripts.php');
-?>
+        new Chart(document.getElementById('levelChart'), {
+            type: 'doughnut',
+            data: {
+                labels: <?php echo json_encode($level_labels ?? []); ?>,
+                datasets: [{
+                    data: <?php echo json_encode($level_data ?? []); ?>,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 206, 86, 0.7)',
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(153, 102, 255, 0.7)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
 
-<!-- Custom CSS -->
-<style>
-    .card-title {
-        font-size: 1.2em;
-        font-weight: bold;
-    }
-    .card-count {
-        font-size: 1.2em;
-    }
-    .card-footer {
-        font-size: 1em;
-    }
-</style>
+    <?php include('includes/footer.php'); ?>
+</body>
+</html>
