@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 
 include('includes/header.php');
@@ -175,7 +176,11 @@ if ($result->num_rows > 0) {
 
 <?php
 include('includes/footer.php');
+
+ob_end_flush();
 ?>
+
+
 
 </body>
 </html>

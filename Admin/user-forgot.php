@@ -79,14 +79,7 @@ if (isset($_POST['submit'])) {
 
 <body class="bg-light">
 
-<?php
-// Check if the session variable for success message is set and display it
-if (isset($_SESSION['success_message'])) {
-    echo "<script type='text/javascript'>alert('" . $_SESSION['success_message'] . "');</script>";
-    // Unset the session variable after displaying the message
-    unset($_SESSION['success_message']);
-}
-?>
+
 
 <div class="center-container">
     <img src="images/MyPetakom Logo.png" alt="PETAKOM Logo" class="logo">

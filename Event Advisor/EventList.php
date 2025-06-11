@@ -3,8 +3,21 @@ session_start();
 require_once 'includes/dbconnection.php';
 include('includes/header.php');
 
-// Fetch all events
-$sql = "SELECT * FROM event ORDER BY E_startDate DESC";
+// Initialize search variables
+$searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
+$whereClause = '';
+
+// If search term exists, add WHERE conditions
+if (!empty($searchTerm)) {
+    $searchTerm = $conn->real_escape_string($searchTerm);
+    $whereClause = " WHERE E_name LIKE '%$searchTerm%' 
+                     OR E_description LIKE '%$searchTerm%' 
+                     OR E_geoLocation LIKE '%$searchTerm%' 
+                     OR E_eventStatus LIKE '%$searchTerm%'";
+}
+
+// Fetch all events (with search filter if applicable)
+$sql = "SELECT * FROM event $whereClause ORDER BY E_startDate DESC";
 $result = $conn->query($sql);
 ?>
 
@@ -32,6 +45,9 @@ $result = $conn->query($sql);
         .btn-group-actions {
             gap: 0.25rem;
         }
+        .search-container {
+            max-width: 400px;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -52,9 +68,25 @@ $result = $conn->query($sql);
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2><i class="fas fa-list me-2"></i>All Events</h2>
-                    <a href="EventRegistrationForm.php" class="btn btn-success">
-                        <i class="fas fa-plus me-2"></i>Add New Event
-                    </a>
+                    <div class="d-flex">
+                        <form method="GET" action="" class="search-container me-3">
+                            <div class="input-group">
+                                <input type="text" class="form-control" name="search" placeholder="Search events..." 
+                                    value="<?php echo htmlspecialchars($searchTerm); ?>">
+                                <button class="btn btn-outline-secondary" type="submit">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                                <?php if (!empty($searchTerm)): ?>
+                                    <a href="event_list.php" class="btn btn-outline-danger">
+                                        <i class="fas fa-times"></i>
+                                    </a>
+                                <?php endif; ?>
+                            </div>
+                        </form>
+                        <a href="EventRegistrationForm.php" class="btn btn-success">
+                            <i class="fas fa-plus me-2"></i>Add New Event
+                        </a>
+                    </div>
                 </div>
 
                 <?php if (isset($_SESSION['message'])): ?>
@@ -64,6 +96,13 @@ $result = $conn->query($sql);
                         unset($_SESSION['message'], $_SESSION['message_type']);
                         ?>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($searchTerm)): ?>
+                    <div class="alert alert-info mb-3">
+                        Showing results for: <strong><?php echo htmlspecialchars($searchTerm); ?></strong>
+                        <a href="EventList.php" class="float-end">Clear search</a>
                     </div>
                 <?php endif; ?>
 
@@ -122,7 +161,6 @@ $result = $conn->query($sql);
                                                     class="btn btn-outline-dark btn-sm flex-fill">
                                                     <i class="fas fa-qrcode"></i> QR Code
                                             </a>
-
                                         </div>
                                     </div>
                                 </div>
@@ -133,7 +171,13 @@ $result = $conn->query($sql);
                             <div class="text-center py-5">
                                 <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
                                 <h4 class="text-muted">No Events Found</h4>
-                                <p class="text-muted">There are currently no events in the system.</p>
+                                <p class="text-muted">
+                                    <?php if (!empty($searchTerm)): ?>
+                                        No events match your search criteria.
+                                    <?php else: ?>
+                                        There are currently no events in the system.
+                                    <?php endif; ?>
+                                </p>
                                 <a href="EventRegistrationForm.php" class="btn btn-primary">
                                     <i class="fas fa-plus me-2"></i>Create New Event
                                 </a>
