@@ -1,4 +1,6 @@
 <?php
+require_once('user-validatesession.php');
+
 require_once('includes/dbconnection.php');
 require_once('includes/header.php');
 

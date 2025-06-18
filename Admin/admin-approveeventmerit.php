@@ -1,4 +1,5 @@
 <?php
+require_once('user-validatesession.php');
 
 include 'includes/header.php';
 

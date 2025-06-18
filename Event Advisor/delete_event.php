@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once('user-validatesession.php');
+
 include('includes/dbconnection.php');
 
 if (isset($_GET['id'])) {

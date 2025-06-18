@@ -1,6 +1,5 @@
 <?php
-// Start session FIRST before any output
-session_start();
+require_once('user-validatesession.php');
 
 // Debug: Check what session variables exist (remove this after debugging)
 // echo "<pre>"; print_r($_SESSION); echo "</pre>"; exit();

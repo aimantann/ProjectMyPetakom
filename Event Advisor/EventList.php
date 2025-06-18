@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once('user-validatesession.php');
 require_once 'includes/dbconnection.php';
 include('includes/header.php');
 

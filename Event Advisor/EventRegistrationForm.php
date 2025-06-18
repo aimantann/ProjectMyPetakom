@@ -1,6 +1,7 @@
 <?php
+require_once('user-validatesession.php');
+
 ob_start(); // Add output buffering at the very start
-session_start();
 
 // Include DB connection
 require_once('includes/dbconnection.php');

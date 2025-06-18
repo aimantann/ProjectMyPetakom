@@ -1,6 +1,7 @@
 <?php
+require_once('user-validatesession.php');
+
 ob_start();
-session_start();
 
 include('includes/dbconnection.php');
 include('includes/header.php');

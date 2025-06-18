@@ -1,5 +1,6 @@
 <?php
-session_start();
+require_once('user-validatesession.php');
+
 date_default_timezone_set('Asia/Kuala_Lumpur');
 include("includes/dbconnection.php");
 

@@ -1,8 +1,7 @@
 <?php
-session_start();
+require_once('user-validatesession.php');
+
 include('includes/dbconnection.php');
-
-
 
 // Set timezone to match student-view-merit.php
 date_default_timezone_set('Asia/Kuala_Lumpur');

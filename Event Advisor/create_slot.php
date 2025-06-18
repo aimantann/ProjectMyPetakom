@@ -1,6 +1,5 @@
 <?php
-// Start the session and include required files before any output
-session_start();
+require_once('user-validatesession.php');
 
 require_once('includes/dbconnection.php');
 
