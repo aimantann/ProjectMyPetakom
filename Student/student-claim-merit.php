@@ -11,10 +11,24 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
     exit();
 }
 
+// Define available semesters
+$semesters = [
+    "SEMESTER II ACADEMIC SESSION 2024/2025",
+    "SEMESTER I ACADEMIC SESSION 2024/2025",
+    "SEMESTER II ACADEMIC SESSION 2023/2024",
+    "SEMESTER I ACADEMIC SESSION 2023/2024",
+    "SEMESTER II ACADEMIC SESSION 2022/2023",
+    "SEMESTER I ACADEMIC SESSION 2022/2023"
+];
+
+// Get selected semester or default to current
+$selected_semester = isset($_POST['semester']) ? $_POST['semester'] : "SEMESTER II ACADEMIC SESSION 2024/2025";
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $event_id = $_POST['event_id'];
     $role = $_POST['role'];
+    $semester = $_POST['semester'];
     $user_id = $_SESSION['user_id'];
     
     // Handle file upload
@@ -48,39 +62,51 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Insert into database if no errors
     if (!isset($error_message)) {
         $submit_date = date('Y-m-d H:i:s');
-        $claim_status = 'Pending'; // Status will be Pending when saved
+        $claim_status = 'Pending';
         
-        // Check if claim already exists
-        $check_query = "SELECT MC_claimID FROM meritclaim 
-                       WHERE U_userID = ? AND E_eventID = ?";
-        $check_stmt = $conn->prepare($check_query);
-        $check_stmt->bind_param("ii", $user_id, $event_id);
-        $check_stmt->execute();
-        $existing_claim = $check_stmt->get_result()->fetch_assoc();
+        // Start transaction
+        $conn->begin_transaction();
         
-        if (!$existing_claim) {
-            $sql = "INSERT INTO meritclaim (E_eventID, U_userID, MC_role, MC_documentPath, MC_submitDate, MC_claimStatus) 
-                    VALUES (?, ?, ?, ?, ?, ?)";
+        try {
+            // Check if claim already exists
+            $check_query = "SELECT MC_claimID FROM meritclaim 
+                           WHERE U_userID = ? AND E_eventID = ?";
+            $check_stmt = $conn->prepare($check_query);
+            $check_stmt->bind_param("ii", $user_id, $event_id);
+            $check_stmt->execute();
+            $existing_claim = $check_stmt->get_result()->fetch_assoc();
             
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("iissss", $event_id, $user_id, $role, $file_path, $submit_date, $claim_status);
-            
-            if ($stmt->execute()) {
-                // Redirect to student-my-merit-claims.php with success message
-                $_SESSION['claim_saved'] = "Claim has been saved successfully!";
-                echo "<script>
-                    window.location.href = 'student-my-merit-claims.php';
-                </script>";
-                exit();
+            if (!$existing_claim) {
+                // Insert claim
+                $sql = "INSERT INTO meritclaim (E_eventID, U_userID, MC_role, MC_documentPath, MC_submitDate, MC_claimStatus) 
+                        VALUES (?, ?, ?, ?, ?, ?)";
+                
+                $stmt = $conn->prepare($sql);
+                $stmt->bind_param("iissss", $event_id, $user_id, $role, $file_path, $submit_date, $claim_status);
+                
+                if ($stmt->execute()) {
+                    // Save semester information
+                    $semester_sql = "INSERT INTO eventsemester (ES_semester, E_eventID) VALUES (?, ?)
+                                   ON DUPLICATE KEY UPDATE ES_semester = VALUES(ES_semester)";
+                    $semester_stmt = $conn->prepare($semester_sql);
+                    $semester_stmt->bind_param("si", $semester, $event_id);
+                    $semester_stmt->execute();
+                    
+                    $conn->commit();
+                    
+                    $_SESSION['claim_saved'] = "Claim has been saved successfully!";
+                    echo "<script>
+                        window.location.href = 'student-my-merit-claims.php';
+                    </script>";
+                    exit();
+                }
             } else {
-                $error_message = "Error saving claim. Please try again.";
+                $error_message = "You have already submitted a claim for this event.";
             }
-            
-            $stmt->close();
-        } else {
-            $error_message = "You have already submitted a claim for this event.";
+        } catch (Exception $e) {
+            $conn->rollback();
+            $error_message = "Error saving claim. Please try again.";
         }
-        $check_stmt->close();
     }
 }
 
@@ -97,8 +123,6 @@ $events = [];
 while ($row = mysqli_fetch_assoc($events_result)) {
     $events[] = $row;
 }
-
-$conn->close();
 ?>
 
 <!DOCTYPE html>
@@ -107,7 +131,6 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claim Merit - MyPetakom</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -138,6 +161,11 @@ $conn->close();
             background-color: #0b5ed7;
         }
 
+        .required {
+            color: red;
+            margin-left: 3px;
+        }
+
         .role-options label {
             border: 2px solid #dee2e6;
             border-radius: 10px;
@@ -151,6 +179,15 @@ $conn->close();
             background-color: #0d6efd;
             color: white;
             border-color: #0d6efd;
+        }
+
+        .role-options label:hover {
+            border-color: #0d6efd;
+            background-color: #f8f9fa;
+        }
+
+        .role-options input[type="radio"]:checked + label:hover {
+            background-color: #0056b3;
         }
 
         .file-upload {
@@ -167,10 +204,6 @@ $conn->close();
             background-color: #f8f9fa;
         }
 
-        .required {
-            color: red;
-        }
-
         .alert {
             opacity: 1;
             transition: opacity 5s ease-out;
@@ -179,6 +212,12 @@ $conn->close();
         .alert.fade-out {
             opacity: 0;
         }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -186,9 +225,7 @@ $conn->close();
         <div class="card mb-4">
             <div class="card-header p-3">
                 <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h4 class="mb-0">Claim Merit</h4>
-                    </div>
+                    <h4 class="mb-0">Claim Merit</h4>
                 </div>
             </div>
             <div class="card-body p-4">
@@ -200,6 +237,21 @@ $conn->close();
                 <?php endif; ?>
 
                 <form method="POST" enctype="multipart/form-data" id="claimForm">
+                    <!-- Semester Selection -->
+                    <div class="mb-4">
+                        <label for="semester" class="form-label fw-bold">
+                            Select Semester <span class="required">*</span>
+                        </label>
+                        <select name="semester" id="semester" class="form-select" required>
+                            <?php foreach ($semesters as $semester): ?>
+                                <option value="<?php echo $semester; ?>" 
+                                        <?php echo ($semester === $selected_semester) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($semester); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
                     <!-- Event Selection -->
                     <div class="mb-4">
                         <label for="event_id" class="form-label fw-bold">
@@ -217,12 +269,6 @@ $conn->close();
                                 <option value="" disabled>No active events available</option>
                             <?php endif; ?>
                         </select>
-                        <?php if (empty($events)): ?>
-                            <div class="form-text text-danger">
-                                <i class="fas fa-info-circle"></i> 
-                                There are currently no active events available for merit claims.
-                            </div>
-                        <?php endif; ?>
                     </div>
 
                     <!-- Role Selection -->
@@ -285,64 +331,59 @@ $conn->close();
         </div>
     </div>
 
-    <!-- Bootstrap JS and dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
     
     <script>
-    // File upload handler
-    document.getElementById('participation_letter').addEventListener('change', function(e) {
-        const fileInfo = document.getElementById('file-info');
-        const file = e.target.files[0];
-        
-        if (file) {
-            const fileSize = (file.size / 1024 / 1024).toFixed(2);
-            fileInfo.innerHTML = `
-                <i class="fas fa-file me-2"></i>
-                Selected: ${file.name} (${fileSize} MB)
-            `;
-            fileInfo.style.display = 'block';
+        document.getElementById('participation_letter').addEventListener('change', function(e) {
+            const fileInfo = document.getElementById('file-info');
+            const file = e.target.files[0];
             
-            if (file.size > 5 * 1024 * 1024) {
-                alert('File size must be less than 5MB');
-                e.target.value = '';
+            if (file) {
+                const fileSize = (file.size / 1024 / 1024).toFixed(2);
+                fileInfo.innerHTML = `
+                    <i class="fas fa-file me-2"></i>
+                    Selected: ${file.name} (${fileSize} MB)
+                `;
+                fileInfo.style.display = 'block';
+                
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('File size must be less than 5MB');
+                    e.target.value = '';
+                    fileInfo.style.display = 'none';
+                }
+            } else {
                 fileInfo.style.display = 'none';
             }
-        } else {
-            fileInfo.style.display = 'none';
-        }
-    });
+        });
 
-    // Form validation
-    document.getElementById('claimForm').addEventListener('submit', function(e) {
-        const eventId = document.getElementById('event_id').value;
-        const role = document.querySelector('input[name="role"]:checked');
-        const file = document.getElementById('participation_letter').files[0];
+        document.getElementById('claimForm').addEventListener('submit', function(e) {
+            const eventId = document.getElementById('event_id').value;
+            const role = document.querySelector('input[name="role"]:checked');
+            const file = document.getElementById('participation_letter').files[0];
 
-        if (!eventId || !role || !file) {
-            e.preventDefault();
-            alert('Please fill in all required fields');
-            return false;
-        }
+            if (!eventId || !role || !file) {
+                e.preventDefault();
+                alert('Please fill in all required fields');
+                return false;
+            }
 
-        const submitBtn = this.querySelector('button[type="submit"]');
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Submitting...';
-        submitBtn.disabled = true;
-    });
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Submitting...';
+            submitBtn.disabled = true;
+        });
 
-    // Add fade out effect for error message
-    const errorAlert = document.getElementById('errorAlert');
-    if (errorAlert) {
-        setTimeout(() => {
-            errorAlert.classList.add('fade-out');
+        const errorAlert = document.getElementById('errorAlert');
+        if (errorAlert) {
             setTimeout(() => {
-                errorAlert.style.display = 'none';
-            }, 5000); // Wait for fade out animation to complete
-        }, 100);
-    }
-</script>
-<?php
-include('includes/footer.php');
-?>
+                errorAlert.classList.add('fade-out');
+                setTimeout(() => {
+                    errorAlert.style.display = 'none';
+                }, 5000);
+            }, 100);
+        }
+    </script>
+
+    <?php include('includes/footer.php'); ?>
 </body>
 </html>
