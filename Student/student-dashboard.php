@@ -271,8 +271,6 @@ while ($row = $chart_data->fetch_assoc()) {
                             </div>
                         </div>
                         
-                        //boiii
-                        
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
