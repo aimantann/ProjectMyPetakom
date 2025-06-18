@@ -27,7 +27,8 @@ $merit_url = $protocol . $host . "/{$folder}/qr-student.php?id=" . base64_encode
 // Update QR code information in user table
 $update_qr_query = "UPDATE user SET U_qrCode = ?, U_qrGeneratedDate = ? WHERE U_userID = ?";
 $stmt = $conn->prepare($update_qr_query);
-$stmt->bind_param("ssi", $merit_url, date('Y-m-d H:i:s'), $_SESSION['user_id']);
+$qr_date = date('Y-m-d H:i:s');
+$stmt->bind_param("ssi", $merit_url, $qr_date, $_SESSION['user_id']);
 $stmt->execute();
 ?>
 

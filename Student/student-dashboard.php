@@ -194,7 +194,7 @@ while ($row = $chart_data->fetch_assoc()) {
                         <?php endforeach; ?>
                     </select>
                 </form>
-                <a href="student-qr.php" class="qr-button">
+                <a href="generate-qr.php" class="qr-button">
                     <i class="fas fa-qrcode"></i>
                     Generate QR
                 </a>
