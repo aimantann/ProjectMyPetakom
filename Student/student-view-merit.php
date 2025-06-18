@@ -11,7 +11,20 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
     exit();
 }
 
-// Get user's merit data for current semester (Semester 3)
+// Define available semesters
+$available_semesters = [
+    "SEMESTER II ACADEMIC SESSION 2024/2025",
+    "SEMESTER I ACADEMIC SESSION 2024/2025",
+    "SEMESTER II ACADEMIC SESSION 2023/2024",
+    "SEMESTER I ACADEMIC SESSION 2023/2024",
+    "SEMESTER II ACADEMIC SESSION 2022/2023",
+    "SEMESTER I ACADEMIC SESSION 2022/2023"
+];
+
+// Get selected semester or default to current
+$selected_semester = isset($_POST['semester']) ? $_POST['semester'] : "SEMESTER II ACADEMIC SESSION 2024/2025";
+
+// Get merit data for selected semester
 $query = "SELECT 
     e.E_name as event_name,
     e.E_level as event_level,
@@ -22,90 +35,35 @@ FROM meritawarded md
 JOIN event e ON md.E_eventID = e.E_eventID
 JOIN meritclaim mc ON md.E_eventID = mc.E_eventID 
     AND md.U_userID = mc.U_userID
+JOIN eventsemester es ON e.E_eventID = es.E_eventID
 WHERE md.U_userID = ? 
     AND mc.MC_claimStatus = 'Approved'
+    AND es.ES_semester = ?
 ORDER BY md.MD_awardedDate DESC";
 
-// Add dummy data for previous semesters
-$dummy_semester_data = [
-    'Semester 1 2024' => [
-        [
-            'event_name' => 'Programming Competition',
-            'event_level' => 'National',
-            'role' => 'Main Committee',
-            'merit_awarded' => 80,
-            'date_awarded' => '2024-11-15'
-        ],
-        [
-            'event_name' => 'Tech Workshop Series',
-            'event_level' => 'UMPSA',
-            'role' => 'Committee',
-            'merit_awarded' => 20,
-            'date_awarded' => '2024-10-20'
-        ],
-        [
-            'event_name' => 'Cyber Security Seminar',
-            'event_level' => 'State',
-            'role' => 'Participant',
-            'merit_awarded' => 30,
-            'date_awarded' => '2024-09-05'
-        ]
-    ],
-    'Semester 2 2024' => [
-        [
-            'event_name' => 'IT Career Fair',
-            'event_level' => 'District',
-            'role' => 'Main Committee',
-            'merit_awarded' => 40,
-            'date_awarded' => '2025-03-20'
-        ],
-        [
-            'event_name' => 'Database Management Workshop',
-            'event_level' => 'UMPSA',
-            'role' => 'Committee',
-            'merit_awarded' => 20,
-            'date_awarded' => '2025-02-15'
-        ]
-    ]
-];
-
-// Calculate dummy semester totals
-$dummy_semester_totals = [
-    'Semester 1 2024' => 130, // 80 + 20 + 30
-    'Semester 2 2024' => 60   // 40 + 20
-];
-
 try {
-    // Get current semester (Semester 3) data
+    // Get current semester data
     $stmt = $conn->prepare($query);
-    $stmt->bind_param("i", $_SESSION['user_id']);
+    $stmt->bind_param("is", $_SESSION['user_id'], $selected_semester);
     $stmt->execute();
     $result = $stmt->get_result();
 
-    // Initialize the merits array with dummy data
-    $merits_by_semester = $dummy_semester_data;
-    
-    // Add current semester (Semester 3) data
-    $current_semester = 'Semester 3 2025';
-    $merits_by_semester[$current_semester] = [];
-    $semester_totals = $dummy_semester_totals;
-    $semester_totals[$current_semester] = 0;
+    // Initialize arrays for the selected semester
+    $merits_by_semester = [];
+    $merits_by_semester[$selected_semester] = [];
+    $semester_total = 0;
 
-    // Process current semester data from database
+    // Process semester data
     while ($row = $result->fetch_assoc()) {
-        $merits_by_semester[$current_semester][] = [
+        $merits_by_semester[$selected_semester][] = [
             'event_name' => $row['event_name'],
             'event_level' => $row['event_level'],
             'role' => $row['role'],
             'merit_awarded' => $row['merit_awarded'],
             'date_awarded' => $row['date_awarded']
         ];
-        // Add to semester total
-        $semester_totals[$current_semester] += $row['merit_awarded'];
+        $semester_total += $row['merit_awarded'];
     }
-
-    // Calculate overall total including dummy data
-    $total_merits = array_sum($semester_totals);
 
     // Close statement
     $stmt->close();
@@ -152,10 +110,25 @@ try {
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
         .page-title {
             font-size: 28px;
             color: #333;
             font-weight: 600;
+        }
+
+        .semester-select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            min-width: 300px;
         }
 
         .merit-summary {
@@ -183,10 +156,6 @@ try {
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             overflow: hidden;
-            margin-bottom: 30px;
-        }
-
-        .semester-section {
             margin-bottom: 30px;
         }
 
@@ -266,64 +235,6 @@ try {
             font-size: 18px;
         }
 
-        .header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-}
-
-.btn-generate-qr {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 16px;
-}
-
-.btn-generate-qr:hover {
-    background-color: #0056b3;
-}
-
-.popup {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-}
-
-.popup-content {
-    position: relative;
-    background-color: white;
-    margin: 15% auto;
-    padding: 20px;
-    width: 300px;
-    border-radius: 10px;
-    text-align: center;
-}
-
-.close {
-    position: absolute;
-    right: 10px;
-    top: 5px;
-    font-size: 24px;
-    cursor: pointer;
-    color: #666;
-}
-
-.close:hover {
-    color: #333;
-}
-
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -334,23 +245,34 @@ try {
                 padding: 10px 8px;
                 font-size: 14px;
             }
+
+            .semester-select {
+                min-width: 200px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header with Title -->
+        <!-- Header with Title and Semester Selection -->
         <div class="header">
             <div class="header-content">
                 <h1 class="page-title">View Merit</h1>
-                <button id="generateQRBtn" class="btn-generate-qr">
-                    <i class="fas fa-qrcode"></i> Generate QR
-                </button>
+                <form method="POST" id="semesterForm">
+                    <select name="semester" class="semester-select" onchange="this.form.submit()">
+                        <?php foreach ($available_semesters as $semester): ?>
+                            <option value="<?php echo $semester; ?>" 
+                                    <?php echo ($semester === $selected_semester) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($semester); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </form>
             </div>
         </div>
 
         <?php if (isset($error_message)): ?>
-            <div class="error-message">
+            <div class="alert alert-danger">
                 <i class="fas fa-exclamation-circle"></i>
                 <?php echo $error_message; ?>
             </div>
@@ -358,68 +280,50 @@ try {
 
         <!-- Merit Summary -->
         <div class="merit-summary">
-            <div class="total-merits"><?php echo $total_merits; ?></div>
-            <div class="merit-label">Total Cumulative Merit Points</div>
+            <div class="total-merits"><?php echo $semester_total; ?></div>
+            <div class="merit-label">Total Merit Points for <?php echo htmlspecialchars($selected_semester); ?></div>
         </div>
 
         <!-- Merit History Table -->
         <div class="merit-table-container">
-            <?php if (!empty($merits_by_semester)): ?>
-                <?php 
-                // Display semesters in reverse chronological order
-                krsort($merits_by_semester);
-                foreach ($merits_by_semester as $semester => $semester_merits): 
-                ?>
-                    <div class="semester-section">
-                        <div class="table-header">
-                            <h2 class="table-title"><?php echo htmlspecialchars($semester); ?></h2>
-                            <div class="semester-total">Total: <?php echo $semester_totals[$semester]; ?> points</div>
-                        </div>
-                        <table class="merit-table">
-                            <thead>
-                                <tr>
-                                    <th>Event Name</th>
-                                    <th>Level</th>
-                                    <th>Role</th>
-                                    <th>Merit Points</th>
-                                    <th>Date Awarded</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($semester_merits as $merit): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($merit['event_name']); ?></td>
-                                        <td><?php echo htmlspecialchars($merit['event_level']); ?></td>
-                                        <td>
-                                            <span class="role-badge <?php 
-                                                echo $merit['role'] === 'Main Committee' ? 'role-main' : 
-                                                     ($merit['role'] === 'Committee' ? 'role-committee' : 'role-participant'); 
-                                            ?>">
-                                                <?php echo htmlspecialchars($merit['role']); ?>
-                                            </span>
-                                        </td>
-                                        <td class="merit-points"><?php echo $merit['merit_awarded']; ?></td>
-                                        <td><?php echo date('d M Y', strtotime($merit['date_awarded'])); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endforeach; ?>
+            <?php if (!empty($merits_by_semester[$selected_semester])): ?>
+                <table class="merit-table">
+                    <thead>
+                        <tr>
+                            <th>Event Name</th>
+                            <th>Level</th>
+                            <th>Role</th>
+                            <th>Merit Points</th>
+                            <th>Date Awarded</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($merits_by_semester[$selected_semester] as $merit): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($merit['event_name']); ?></td>
+                                <td><?php echo htmlspecialchars($merit['event_level']); ?></td>
+                                <td>
+                                    <span class="role-badge <?php 
+                                        echo $merit['role'] === 'Main Committee' ? 'role-main' : 
+                                             ($merit['role'] === 'Committee' ? 'role-committee' : 'role-participant'); 
+                                    ?>">
+                                        <?php echo htmlspecialchars($merit['role']); ?>
+                                    </span>
+                                </td>
+                                <td class="merit-points"><?php echo $merit['merit_awarded']; ?></td>
+                                <td><?php echo date('d M Y', strtotime($merit['date_awarded'])); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             <?php else: ?>
                 <div class="no-merits">
                     <i class="fas fa-trophy" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i>
-                    <p>No merits earned yet. Participate in events to earn merit points!</p>
+                    <p>No merits earned for <?php echo htmlspecialchars($selected_semester); ?></p>
                 </div>
             <?php endif; ?>
         </div>
     </div>
-
-    <script>
-    document.getElementById('generateQRBtn').addEventListener('click', function() {
-        window.open('generate-qr.php', 'QR Code', 'width=400,height=400');
-    });
-    </script>
 
     <?php include('includes/footer.php'); ?>
 </body>

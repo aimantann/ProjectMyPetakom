@@ -1,127 +1,105 @@
 <?php
 session_start();
 include('includes/header.php');
-include('includes/dbconnection.php');
+include("includes/dbconnection.php");
 
-// Security checks
+// Check if user is logged in and is a student
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
     $_SESSION['login_required'] = "Please login as a student to access this page.";
     header('Location: user-login.php');
     exit();
 }
 
-// Dummy data for previous semesters
-$dummy_data = [
-    'Semester 1 2024' => [
-        'total_merit' => 130,
-        'event_count' => 3,
-        'roles' => [
-            'Main Committee' => 1,
-            'Committee' => 1,
-            'Participant' => 1
-        ],
-        'levels' => [
-            'National' => 1,
-            'UMPSA' => 1,
-            'State' => 1
-        ]
-    ],
-    'Semester 2 2024' => [
-        'total_merit' => 60,
-        'event_count' => 2,
-        'roles' => [
-            'Main Committee' => 1,
-            'Committee' => 1
-        ],
-        'levels' => [
-            'District' => 1,
-            'UMPSA' => 1
-        ]
-    ]
+// Define available semesters
+$semesters = [
+    "SEMESTER II ACADEMIC SESSION 2024/2025",
+    "SEMESTER I ACADEMIC SESSION 2024/2025",
+    "SEMESTER II ACADEMIC SESSION 2023/2024",
+    "SEMESTER I ACADEMIC SESSION 2023/2024",
+    "SEMESTER II ACADEMIC SESSION 2022/2023",
+    "SEMESTER I ACADEMIC SESSION 2022/2023"
 ];
 
-// Available semesters (including dummy and current)
-$available_semesters = ['Semester 1 2024', 'Semester 2 2024', 'Semester 3 2025'];
-
 // Get selected semester or default to current
-$selected_semester = isset($_POST['semester']) ? $_POST['semester'] : 'Semester 3 2025';
+$selected_semester = isset($_POST['semester']) ? $_POST['semester'] : "SEMESTER II ACADEMIC SESSION 2024/2025";
 
-// Get data for selected semester
-if ($selected_semester === 'Semester 3 2025') {
-    // Use real data for current semester
-    $merit_query = "SELECT 
-        SUM(md.MD_meritPoint) as total_merit,
-        COUNT(*) as event_count
-    FROM meritawarded md
-    WHERE md.U_userID = ? 
-    AND MONTH(md.MD_awardedDate) BETWEEN 5 AND 8
-    AND YEAR(md.MD_awardedDate) = 2025";
+// Unified search functionality
+$search = isset($_GET['search']) ? $_GET['search'] : '';
 
-    $stmt = $conn->prepare($merit_query);
-    $stmt->bind_param("i", $_SESSION['user_id']);
-    $stmt->execute();
-    $merit_result = $stmt->get_result();
-    $merit_data = $merit_result->fetch_assoc();
+// Event query with unified search
+$event_query = "SELECT e.E_name, e.E_level, mc.MC_role, md.MD_meritPoint 
+                FROM meritawarded md 
+                JOIN meritclaim mc ON md.E_eventID = mc.E_eventID AND md.U_userID = mc.U_userID
+                JOIN event e ON mc.E_eventID = e.E_eventID 
+                JOIN eventsemester es ON e.E_eventID = es.E_eventID
+                WHERE md.U_userID = ? AND es.ES_semester = ?";
 
-    // Get real role distribution
-    $role_query = "SELECT 
-        mc.MC_role as role,
-        COUNT(*) as count
-    FROM meritclaim mc
-    JOIN meritawarded md ON mc.E_eventID = md.E_eventID AND mc.U_userID = md.U_userID
-    WHERE mc.U_userID = ? 
-    AND mc.MC_claimStatus = 'Approved'
-    AND MONTH(md.MD_awardedDate) BETWEEN 5 AND 8
-    AND YEAR(md.MD_awardedDate) = 2025
-    GROUP BY mc.MC_role";
-
-    $stmt = $conn->prepare($role_query);
-    $stmt->bind_param("i", $_SESSION['user_id']);
-    $stmt->execute();
-    $role_result = $stmt->get_result();
-    $role_data = [];
-    $role_labels = [];
-    while ($row = $role_result->fetch_assoc()) {
-        $role_labels[] = $row['role'];
-        $role_data[] = $row['count'];
-    }
-
-    // Get real event level distribution
-    $level_query = "SELECT 
-        e.E_level as level,
-        COUNT(*) as count
-    FROM meritclaim mc
-    JOIN event e ON mc.E_eventID = e.E_eventID
-    JOIN meritawarded md ON mc.E_eventID = md.E_eventID AND mc.U_userID = md.U_userID
-    WHERE mc.U_userID = ? 
-    AND mc.MC_claimStatus = 'Approved'
-    AND MONTH(md.MD_awardedDate) BETWEEN 5 AND 8
-    AND YEAR(md.MD_awardedDate) = 2025
-    GROUP BY e.E_level";
-
-    $stmt = $conn->prepare($level_query);
-    $stmt->bind_param("i", $_SESSION['user_id']);
-    $stmt->execute();
-    $level_result = $stmt->get_result();
-    $level_labels = [];
-    $level_data = [];
-    while ($row = $level_result->fetch_assoc()) {
-        $level_labels[] = $row['level'];
-        $level_data[] = $row['count'];
-    }
+if ($search) {
+    $event_query .= " AND (e.E_name LIKE ? OR e.E_level LIKE ? OR mc.MC_role LIKE ?)";
+    $search = "%$search%";
+    $stmt = $conn->prepare($event_query);
+    $stmt->bind_param("issss", $_SESSION['user_id'], $selected_semester, $search, $search, $search);
 } else {
-    // Use dummy data for previous semesters
-    $semester_data = $dummy_data[$selected_semester];
-    $merit_data = [
-        'total_merit' => $semester_data['total_merit'],
-        'event_count' => $semester_data['event_count']
-    ];
-    
-    $role_labels = array_keys($semester_data['roles']);
-    $role_data = array_values($semester_data['roles']);
-    
-    $level_labels = array_keys($semester_data['levels']);
-    $level_data = array_values($semester_data['levels']);
+    $stmt = $conn->prepare($event_query);
+    $stmt->bind_param("is", $_SESSION['user_id'], $selected_semester);
+}
+
+$stmt->execute();
+$events_result = $stmt->get_result();
+
+// Role summary
+$role_summary_query = "SELECT 
+    mc.MC_role,
+    COUNT(DISTINCT e.E_eventID) as event_count,
+    SUM(md.MD_meritPoint) as total_points
+FROM meritawarded md
+JOIN meritclaim mc ON md.E_eventID = mc.E_eventID AND md.U_userID = mc.U_userID
+JOIN event e ON mc.E_eventID = e.E_eventID
+JOIN eventsemester es ON e.E_eventID = es.E_eventID
+WHERE md.U_userID = ? AND es.ES_semester = ?
+GROUP BY mc.MC_role";
+$stmt = $conn->prepare($role_summary_query);
+$stmt->bind_param("is", $_SESSION['user_id'], $selected_semester);
+$stmt->execute();
+$role_summary = $stmt->get_result();
+
+// Analytics summary
+$analytics_query = "SELECT 
+    COUNT(DISTINCT e.E_eventID) as total_events,
+    COUNT(DISTINCT mc.MC_role) as unique_roles,
+    SUM(md.MD_meritPoint) as total_merit,
+    AVG(md.MD_meritPoint) as avg_merit
+FROM meritawarded md
+JOIN meritclaim mc ON md.E_eventID = mc.E_eventID AND md.U_userID = mc.U_userID
+JOIN event e ON mc.E_eventID = e.E_eventID
+JOIN eventsemester es ON e.E_eventID = es.E_eventID
+WHERE md.U_userID = ? AND es.ES_semester = ?";
+$stmt = $conn->prepare($analytics_query);
+$stmt->bind_param("is", $_SESSION['user_id'], $selected_semester);
+$stmt->execute();
+$analytics = $stmt->get_result()->fetch_assoc();
+
+// Chart data
+$chart_query = "SELECT 
+    e.E_level,
+    COUNT(*) as event_count,
+    SUM(md.MD_meritPoint) as level_points
+FROM meritawarded md
+JOIN meritclaim mc ON md.E_eventID = mc.E_eventID AND md.U_userID = mc.U_userID
+JOIN event e ON mc.E_eventID = e.E_eventID
+JOIN eventsemester es ON e.E_eventID = es.E_eventID
+WHERE md.U_userID = ? AND es.ES_semester = ?
+GROUP BY e.E_level";
+$stmt = $conn->prepare($chart_query);
+$stmt->bind_param("is", $_SESSION['user_id'], $selected_semester);
+$stmt->execute();
+$chart_data = $stmt->get_result();
+
+$levels = [];
+$points = [];
+while ($row = $chart_data->fetch_assoc()) {
+    $levels[] = $row['E_level'];
+    $points[] = $row['level_points'];
 }
 ?>
 
@@ -130,249 +108,286 @@ if ($selected_semester === 'Semester 3 2025') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Dashboard - MyPetakom</title>
+    <title>Merit Dashboard - MyPetakom</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f5f5f5;
-            color: #333;
-            min-height: 100vh;
+            background-color: #f8f9fa;
         }
-
-        .dashboard-container {
-            padding: 10px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .dashboard-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            padding: 10px;
+        .header-container {
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
         }
-
-        .dashboard-title {
-            font-size: 20px;
-            color: #333;
-            font-weight: bold;
+        .header-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 0;
         }
-
         .semester-select {
-            padding: 5px 10px;
+            min-width: 300px;
+            padding: 8px;
             border: 1px solid #ddd;
             border-radius: 5px;
-            font-size: 14px;
-            min-width: 150px;
         }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 10px;
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
-
-        .stat-card {
+        .search-container {
             background: white;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .analytics-card {
             text-align: center;
+            padding: 20px;
         }
-
-        .stat-value {
-            font-size: 20px;
-            font-weight: bold;
-            color: #007bff;
+        .analytics-card h2 {
+            color: #0d6efd;
+            font-size: 2rem;
+            margin: 10px 0;
         }
-
-        .stat-label {
-            color: #666;
-            font-size: 12px;
-            text-transform: uppercase;
+        .table-responsive {
+            padding: 10px;
         }
-
-        .charts-container {
+        .qr-button {
+            background-color: #0d6efd;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 5px;
+            text-decoration: none;
             display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
+            align-items: center;
+            gap: 8px;
         }
-
-        .chart-box {
-            flex: 1;
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .chart-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
-            text-align: center;
-        }
-
-        canvas {
-            width: 100% !important;
-            height: 200px !important;
+        .qr-button:hover {
+            background-color: #0b5ed7;
+            color: white;
+            text-decoration: none;
         }
     </style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <div class="dashboard-header">
-            <h1 class="dashboard-title">Student Dashboard</h1>
-            <form method="post" id="semesterForm">
-                <select name="semester" class="semester-select" onchange="this.form.submit()">
-                    <?php foreach ($available_semesters as $semester): ?>
-                        <option value="<?php echo $semester; ?>" <?php echo ($semester === $selected_semester) ? 'selected' : ''; ?>>
-                            <?php echo $semester; ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
+    <div class="container mt-4">
+        <!-- Header with Title and Semester Selection -->
+        <div class="header-container d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <h1 class="header-title">Student Dashboard</h1>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <form method="POST" id="semesterForm" class="mb-0">
+                    <select name="semester" class="semester-select" onchange="this.form.submit()">
+                        <?php foreach ($semesters as $semester): ?>
+                            <option value="<?php echo $semester; ?>" 
+                                    <?php echo ($semester === $selected_semester) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($semester); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </form>
+                <a href="student-qr.php" class="qr-button">
+                    <i class="fas fa-qrcode"></i>
+                    Generate QR
+                </a>
+            </div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value"><?php echo isset($merit_data['total_merit']) ? $merit_data['total_merit'] : 0; ?></div>
-                <div class="stat-label">Total Merit Points</div>
+
+        <!-- Analytics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card analytics-card">
+                    <h5>Total Events</h5>
+                    <h2><?php echo $analytics['total_events']; ?></h2>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value"><?php echo isset($merit_data['event_count']) ? $merit_data['event_count'] : 0; ?></div>
-                <div class="stat-label">Events Participated</div>
+            <div class="col-md-3">
+                <div class="card analytics-card">
+                    <h5>Unique Roles</h5>
+                    <h2><?php echo $analytics['unique_roles']; ?></h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card analytics-card">
+                    <h5>Total Merit</h5>
+                    <h2><?php echo $analytics['total_merit']; ?></h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card analytics-card">
+                    <h5>Average Merit</h5>
+                    <h2><?php echo number_format($analytics['avg_merit'], 1); ?></h2>
+                </div>
             </div>
         </div>
 
-        <div class="charts-container">
-            <div class="chart-box">
-                <div class="chart-title">Merit Points Distribution</div>
-                <canvas id="meritChart"></canvas>
+        <!-- Charts -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Merit Points by Event Level</h5>
+                        <canvas id="levelChart"></canvas>
+                    </div>
+                </div>
             </div>
-            <div class="chart-box">
-                <div class="chart-title">Participation by Role</div>
-                <canvas id="roleChart"></canvas>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Role Distribution</h5>
+                        <canvas id="roleChart"></canvas>
+                    </div>
+                </div>
             </div>
-            <div class="chart-box">
-                <div class="chart-title">Events by Level</div>
-                <canvas id="levelChart"></canvas>
+        </div>
+
+        <!-- Tables -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="card-title mb-0">Event Participation</h5>
+                            <div class="col-md-4">
+                                <form method="GET" class="mb-0">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" name="search" 
+                                               placeholder="Search events..." 
+                                               value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>">
+                                        <button class="btn btn-primary" type="submit">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Event Name</th>
+                                        <th>Level</th>
+                                        <th>Role</th>
+                                        <th>Merit Points</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php while ($event = $events_result->fetch_assoc()): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($event['E_name']); ?></td>
+                                        <td><?php echo htmlspecialchars($event['E_level']); ?></td>
+                                        <td><?php echo htmlspecialchars($event['MC_role']); ?></td>
+                                        <td><?php echo htmlspecialchars($event['MD_meritPoint']); ?></td>
+                                    </tr>
+                                    <?php endwhile; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Role Summary</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Role</th>
+                                        <th>Events Participated</th>
+                                        <th>Total Merit Points</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php while ($role = $role_summary->fetch_assoc()): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($role['MC_role']); ?></td>
+                                        <td><?php echo htmlspecialchars($role['event_count']); ?></td>
+                                        <td><?php echo htmlspecialchars($role['total_points']); ?></td>
+                                    </tr>
+                                    <?php endwhile; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        new Chart(document.getElementById('meritChart'), {
-            type: 'bar',
-            data: {
-                labels: ['Merit Points'],
-                datasets: [{
-                    data: [<?php echo isset($merit_data['total_merit']) ? $merit_data['total_merit'] : 0; ?>],
-                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            font: {
-                                size: 11
-                            }
-                        }
-                    },
-                    x: {
-                        ticks: {
-                            font: {
-                                size: 11
-                            }
-                        }
-                    }
+    // Level Chart
+    const levelChart = new Chart(document.getElementById('levelChart'), {
+        type: 'bar',
+        data: {
+            labels: <?php echo json_encode($levels); ?>,
+            datasets: [{
+                label: 'Merit Points',
+                data: <?php echo json_encode($points); ?>,
+                backgroundColor: [
+                    '#FF6384',
+                    '#36A2EB',
+                    '#FFCE56',
+                    '#4BC0C0'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
                 }
             }
-        });
+        }
+    });
 
-        new Chart(document.getElementById('roleChart'), {
-            type: 'pie',
-            data: {
-                labels: <?php echo json_encode($role_labels ?? []); ?>,
-                datasets: [{
-                    data: <?php echo json_encode($role_data ?? []); ?>,
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.7)',
-                        'rgba(54, 162, 235, 0.7)',
-                        'rgba(255, 206, 86, 0.7)'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            font: {
-                                size: 11
-                            }
-                        }
-                    }
-                }
+    // Role Distribution Chart
+    const roleData = {
+        labels: <?php 
+            $role_labels = [];
+            $role_data = [];
+            $role_summary->data_seek(0);
+            while ($role = $role_summary->fetch_assoc()) {
+                $role_labels[] = $role['MC_role'];
+                $role_data[] = $role['total_points'];
             }
-        });
+            echo json_encode($role_labels);
+        ?>,
+        datasets: [{
+            data: <?php echo json_encode($role_data); ?>,
+            backgroundColor: [
+                '#FF6384',
+                '#36A2EB',
+                '#FFCE56',
+                '#4BC0C0',
+                '#9966FF'
+            ]
+        }]
+    };
 
-        new Chart(document.getElementById('levelChart'), {
-            type: 'doughnut',
-            data: {
-                labels: <?php echo json_encode($level_labels ?? []); ?>,
-                datasets: [{
-                    data: <?php echo json_encode($level_data ?? []); ?>,
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.7)',
-                        'rgba(54, 162, 235, 0.7)',
-                        'rgba(255, 206, 86, 0.7)',
-                        'rgba(75, 192, 192, 0.7)',
-                        'rgba(153, 102, 255, 0.7)'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            font: {
-                                size: 11
-                            }
-                        }
-                    }
+    new Chart(document.getElementById('roleChart'), {
+        type: 'pie',
+        data: roleData,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
                 }
             }
-        });
+        }
+    });
     </script>
 
     <?php include('includes/footer.php'); ?>
