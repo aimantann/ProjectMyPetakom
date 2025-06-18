@@ -22,15 +22,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && isset($_P
 
         if ($action === 'approve') {
             // First get the claim details to calculate merit points
-            $get_claim_query = "SELECT mc.*, e.E_level, e.E_name 
+            $get_claim_query = "SELECT mc.*, e.E_level, e.E_name, es.ES_semester 
                                 FROM meritclaim mc 
                                 JOIN event e ON mc.E_eventID = e.E_eventID 
+                                JOIN eventsemester es ON e.E_eventID = es.E_eventID
                                 WHERE mc.MC_claimID = ?";
             $stmt = $conn->prepare($get_claim_query);
             $stmt->bind_param("i", $claim_id);
             $stmt->execute();
-            $claim_result = $stmt->get_result();
-            $claim_data = $claim_result->fetch_assoc();
+            $claim_data = $stmt->get_result()->fetch_assoc();
 
             if ($claim_data) {
                 // Update claim status to Approved
@@ -41,11 +41,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && isset($_P
                 $update_stmt->bind_param("i", $claim_id);
                 $update_stmt->execute();
 
+                // Calculate merit points based on event level and role
+                $merit_points = calculateMeritPoints($claim_data['E_level'], $claim_data['MC_role']);
+
                 // Insert into meritawarded table
                 $insert_query = "INSERT INTO meritawarded 
                             (U_userID, E_eventID, MD_awardedDate, MD_meritPoint) 
                             VALUES (?, ?, ?, ?)";
-                $merit_points = calculateMeritPoints($claim_data['E_level'], $claim_data['MC_role']);
                 $insert_stmt = $conn->prepare($insert_query);
                 $insert_stmt->bind_param("iisi", 
                     $claim_data['U_userID'], 
@@ -123,10 +125,12 @@ $main_query = "SELECT
     mc.MC_role,
     mc.MC_claimStatus,
     mc.MC_submitDate,
-    mc.MC_documentPath
+    mc.MC_documentPath,
+    es.ES_semester
 FROM meritclaim mc
 JOIN event e ON mc.E_eventID = e.E_eventID
 JOIN user u ON mc.U_userID = u.U_userID
+JOIN eventsemester es ON e.E_eventID = es.E_eventID
 WHERE mc.MC_claimStatus = 'Submitted'
 ORDER BY mc.MC_submitDate DESC";
 
@@ -146,9 +150,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Review Claims - Event Advisor</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .role-badge {
@@ -186,6 +188,14 @@ try {
         }
         .table th {
             background-color: #f8f9fa;
+        }
+        .semester-badge {
+            background-color: #6610f2;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 500;
         }
     </style>
 </head>
@@ -225,6 +235,7 @@ try {
                                 <tr>
                                     <th>Name</th>
                                     <th>Event Name</th>
+                                    <th>Semester</th>
                                     <th>Role</th>
                                     <th>Submit Date</th>
                                     <th>Official Letter</th>
@@ -236,6 +247,11 @@ try {
                                     <tr>
                                         <td><?php echo htmlspecialchars($row['student_name']); ?></td>
                                         <td><?php echo htmlspecialchars($row['event_name']); ?></td>
+                                        <td>
+                                            <span class="semester-badge">
+                                                <?php echo htmlspecialchars($row['ES_semester']); ?>
+                                            </span>
+                                        </td>
                                         <td>
                                             <span class="role-badge <?php 
                                                 echo $row['MC_role'] === 'Main Committee' ? 'role-main' : 
