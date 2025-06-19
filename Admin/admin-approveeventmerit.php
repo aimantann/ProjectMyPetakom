@@ -6,7 +6,7 @@ include 'includes/header.php';
 // Database connection
 $servername = "localhost";
 $username = "root";
-$password = "";
+$password = "jazz123";
 $dbname = "mypetakom_db";
 
 try {
