@@ -164,10 +164,10 @@ if (isset($_GET['delete']) && isset($_GET['id'])) {
                             $usertype = $row['U_usertype'];
                             
                             // Determine role based on your actual database SP_ID values
-                            if ($row['SP_ID'] == 2 || $role_type == 'admin' || $sp_role == 'admin') {
+                            if ($row['SP_ID'] == 1 || $role_type == 'admin' || $sp_role == 'admin') {
                                 $role_display = 'Administrator';
                                 $role_class = 'role-admin';
-                            } elseif ($row['SP_ID'] == 3 || $role_type == 'event_advisor' || $sp_role == 'event_advisor') {
+                            } elseif ($row['SP_ID'] == 2 || $role_type == 'event_advisor' || $sp_role == 'event_advisor') {
                                 $role_display = 'Event Advisor';
                                 $role_class = 'role-advisor';
                             } else {
